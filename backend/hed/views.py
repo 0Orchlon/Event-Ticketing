@@ -786,4 +786,4 @@ def checkService(request): # hamgiin ehend duudagdah request shalgah service
         action = "no action"
         respdata = []
         resp = sendResponse(request, 3002, respdata, action)
-        return JsonResponse(resp)
+        return JsonResponse(resp) 

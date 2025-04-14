@@ -186,7 +186,7 @@ resultMessages = {
     3024 : "edituser service key dutuu",
     3025 : "getuserresume service key dutuu", 
     3026 : "getalluser service key dutuu", 
-    3027 : "", 
+    3027 : "key dutuu", 
     3028 : "", 
     3029 : "", 
     3030 : "", 
