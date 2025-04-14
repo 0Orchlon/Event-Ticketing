@@ -4,7 +4,7 @@ from datetime import datetime
 from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
-from backend.settings2 import sendMail, sendResponse ,disconnectDB, connectDB, resultMessages,generateStr
+from backend.settings import sendMail, sendResponse ,disconnectDB, connectDB, resultMessages,generateStr
 
 # Odoogiin tsagiig duuddag service
 def dt_gettime(request):

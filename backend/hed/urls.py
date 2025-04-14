@@ -2,7 +2,7 @@
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import LoginView, UserProfileView, UserViewSet, EventViewSet, BookingViewSet
+from .views3 import LoginView, UserProfileView, UserViewSet, EventViewSet, BookingViewSet
 
 router = DefaultRouter()
 router.register(r'users', UserViewSet)
