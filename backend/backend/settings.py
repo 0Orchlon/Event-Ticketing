@@ -150,6 +150,7 @@ def sendResponse(request, resultCode, data, action="no action"):
 # result Messages. nemj hugjuuleerei
 resultMessages = {
     200:"Success",
+    201:"No more seats or not avialable",
     400:'Bad Request',
     404:"Not found",
     1000 : "Burtgeh bolomjgui. Mail hayag umnu burtgeltei baina",

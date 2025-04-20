@@ -205,8 +205,12 @@ WHERE tickettypeid = {tid} AND availableseat >= 1;
         #print(query)
         cursor.execute(query) # executing query
         myConn.commit()
-        respdata = []
-        resp = sendResponse(request, 200, respdata, action)
+        # respdata = []
+        if cursor.rowcount == 0:
+            resp = sendResponse(request, 201, [], action)
+        else:
+            resp = sendResponse(request, 200, [], action)
+        # resp = sendResponse(request, 200, respdata, action)
         cursor.close() # close the cursor. ALWAYS
     except:
         action = jsons["action"]
