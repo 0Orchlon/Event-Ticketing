@@ -63,7 +63,6 @@ def dt_create_event(request):
 def dt_seats(request):
     jsons =json.loads(request.body)
     action = jsons["action"]
-    
     try:
         eid = jsons['eid'] # event id
         stype = jsons['stype'] # ticket name
@@ -99,6 +98,126 @@ def dt_seats(request):
         disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
         return resp # response bustaaj baina
 
+def dt_booking(request):
+    jsons =json.loads(request.body)
+    action = jsons["action"]
+    try:
+        uid = "uid"
+        ttype = "ttype"
+        quantity = "quantity"
+        tprice = "tprice"
+        status = "status"
+    
+    except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
+        action = jsons['action']
+        respdata = []
+        resp = sendResponse(request, 3006, respdata, action) # response beldej baina. 6 keytei.
+        return resp
+    
+    try: 
+        myConn = connectDB() # database holbolt uusgej baina
+        cursor = myConn.cursor() # cursor uusgej baina
+        query = F"""INSERT INTO bookings (userid, tickettypeid, quantity, totalprice, status, bookingdate)
+        VALUES 
+        ({uid},
+        {ttype},
+        {quantity},
+        {tprice},
+        '{status}',
+        NOW())
+        RETURNING tickettypeid;""" 
+        #print(query)
+        cursor.execute(query) # executing query
+        columns = cursor.description
+        respRow = [{columns[index][0]: column for index, column in enumerate(value)} for value in cursor.fetchall()]
+        myConn.commit()
+        resp = sendResponse(request, 200, respRow, action)
+        cursor.close() # close the cursor. ALWAYS
+    except:
+        action = jsons["action"]
+        respdata = [] # hooson data bustaana.
+        resp = sendResponse(request, 5000, respdata, action) # standartiin daguu 6 key-tei response butsaana
+        
+    finally:
+        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
+        return resp # response bustaaj baina
+
+def dt_paymethod(request):
+    jsons =json.loads(request.body)
+    action = jsons["action"]
+    try:
+        uid = jsons["uid"]
+        provider = jsons["provider"]
+        token = jsons["token"]
+    
+    except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
+        action = jsons['action']
+        respdata = []
+        resp = sendResponse(request, 3006, respdata, action) # response beldej baina. 6 keytei.
+        return resp
+    
+    try: 
+        myConn = connectDB() # database holbolt uusgej baina
+        cursor = myConn.cursor() # cursor uusgej baina
+        query = F"""INSERT INTO paymentmethods (userid, provider, token, createdate)
+        VALUES 
+        ({uid},
+        {provider},
+        {token},
+        NOW())
+        RETURNING tickettypeid;""" 
+        #print(query)
+        cursor.execute(query) # executing query
+        columns = cursor.description
+        respRow = [{columns[index][0]: column for index, column in enumerate(value)} for value in cursor.fetchall()]
+        myConn.commit()
+        resp = sendResponse(request, 200, respRow, action)
+        cursor.close() # close the cursor. ALWAYS
+    except:
+        action = jsons["action"]
+        respdata = [] # hooson data bustaana.
+        resp = sendResponse(request, 5000, respdata, action) # standartiin daguu 6 key-tei response butsaana
+        
+    finally:
+        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
+        return resp # response bustaaj baina
+
+def dt_add(request):
+    jsons =json.loads(request.body)
+    action = jsons["action"]
+    try:
+        tid = jsons["tid"]
+    
+    except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
+        action = jsons['action']
+        respdata = []
+        resp = sendResponse(request, 3006, respdata, action) # response beldej baina. 6 keytei.
+        return resp
+    
+    try: 
+        myConn = connectDB() # database holbolt uusgej baina
+        cursor = myConn.cursor() # cursor uusgej baina
+        query = F"""
+UPDATE tickettypes 
+SET availableseat = availableseat - 1 
+WHERE tickettypeid = {tid} AND availableseat >= 1;
+""" 
+        #print(query)
+        cursor.execute(query) # executing query
+        myConn.commit()
+        respdata = []
+        resp = sendResponse(request, 200, respdata, action)
+        cursor.close() # close the cursor. ALWAYS
+    except:
+        action = jsons["action"]
+        respdata = [] # hooson data bustaana.
+        resp = sendResponse(request, 5000, respdata, action) # standartiin daguu 6 key-tei response butsaana
+        
+    finally:
+        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
+        return resp # response bustaaj baina
+
+
 @csrf_exempt
 def EventService(request):
     if request.method == "POST": # Method ni POST esehiig shalgaj baina
@@ -122,15 +241,21 @@ def EventService(request):
             resp = sendResponse(request, 3005, respdata,action) # standartiin daguu 6 key-tei response butsaana
             return JsonResponse(resp)# response bustaaj baina
         
-        # request-n action ni gettime
         if action == "addevent":
             result = dt_create_event(request)
             return JsonResponse(result)
-        # request-n action ni edituser
         elif action == "seats":
             result = dt_seats(request)
             return JsonResponse(result)
-                # request-n action ni edituser
+        elif action == "booking":
+            result = dt_booking(request)
+            return JsonResponse(result)
+        elif action == "paymethod":
+            result = dt_paymethod(request)
+            return JsonResponse(result)
+        elif action == "buy":
+            result = dt_add(request)
+            return JsonResponse(result)
         else:
             action = "no action"
             respdata = []
