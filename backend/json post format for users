@@ -1,0 +1,45 @@
+localhost:8000/user/
+
+{
+         "action": "register",
+         "gmail":"get@gg.com",
+         "username":"Orchlon",
+         "password":5234
+
+     }
+    
+    
+    {
+    "action":"verify",
+    "uid":8,
+    "token":"isbmtffoljocefhv1yti"
+
+}
+
+{
+    "action":"login",
+    "gmail":"get@gg.com",
+    "password": 5234
+}
+
+{
+	"action":"forgot",
+	"gmail":"get@gg.com".
+}
+
+{
+    "action":"resetpassword",
+    "token":"rvo6sc138370onex033pd8jbb",
+    "newpass":"1234"
+}
+
+{
+	"action":"changepassword",
+	"gmail":"get@gg.com",
+	"newpass": 4321,
+	"oldpass":1234
+	}
+	
+	
+localhost:8000/eventapi/
+

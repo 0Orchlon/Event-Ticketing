@@ -86,7 +86,7 @@ def dt_login(request):
         cursor = myConn.cursor() # cursor uusgej baina
         
         # Hereglegchiin ner, password-r nevtreh erhtei (is_verified=True) hereglegch login hiij baigaag toolj baina.
-        query = F"""SELECT COUNT(*) AS usercount, MIN(fname) AS fname, MAX(lname) AS lname, MIN(username) AS username 
+        query = F"""SELECT COUNT(*) AS usercount, MIN(username) AS username 
                 FROM users
                 WHERE gmail = '{gmail}' 
                 AND is_verified = True 
@@ -104,7 +104,7 @@ def dt_login(request):
             cursor1 = myConn.cursor() # creating cursor1
             
             # get logged user information
-            query = F"""SELECT uid, gmail, fname, lname, last_login, username
+            query = F"""SELECT uid, gmail, last_login, username
                     FROM users 
                     WHERE gmail = '{gmail}' AND is_verified = True AND password = '{password}'"""
             
@@ -117,11 +117,10 @@ def dt_login(request):
             
             uid = respRow[0]['uid'] #
             gmail = respRow[0]['gmail'] # 
-            fname = respRow[0]['fname'] #
-            lname = respRow[0]['lname'] #
+            lname = respRow[0]['username'] #
             last_login = respRow[0]['last_login'] #
 
-            respdata = [{'uid': uid,'gmail':gmail, 'fname':fname, 'lname':lname, 'last_login':last_login}] # creating response logged user information
+            respdata = [{'uid': uid,'gmail':gmail, 'username':lname, 'last_login':last_login}] # creating response logged user information
             resp = sendResponse(request, 1002, respdata, action) # response beldej baina. 6 keytei.
 
             query = F"""UPDATE users 
@@ -526,8 +525,7 @@ def dt_changepassword(request):
         # burtgeltei batalgaajsan hereglegchiin nuuts ug zuv esehiig shalgaj baina. Burtgelgui, verified hiigeegui, huuchin nuuts ug taarahgui hereglegch bol change password ajillahgui.
         query = f"""SELECT COUNT(uid) AS usercount ,MAX(uid) AS uid
                     ,MIN(gmail) AS gmail
-                    ,MIN (lname) AS lname
-                    ,MAX (fname) AS fname
+                    ,MAX (username) AS fname
                     FROM users
                     WHERE gmail='{gmail}'  
                     AND is_verified=true
@@ -540,7 +538,6 @@ def dt_changepassword(request):
         if respRow[0]['usercount'] == 1: # Burtgeltei, batalgaajsan, huuchin nuuts ug taarsan hereglegch oldson bol nuuts ugiig shineer solihiig zuvshuurnu.
             uid = respRow[0]['uid']
             gmail = respRow[0]['gmail']
-            lname = respRow[0]['lname']
             fname = respRow[0]['fname']
             
             query = F"""UPDATE users SET password='{newpass}'
@@ -550,7 +547,7 @@ def dt_changepassword(request):
             
             # sending Response
             action = jsons['action']
-            respdata = [{"gmail":gmail, "lname": lname, "fname":fname}]
+            respdata = [{"gmail":gmail, "username":fname}]
             resp = sendResponse(request, 3022, respdata, action )
             
         else: # old password not match
