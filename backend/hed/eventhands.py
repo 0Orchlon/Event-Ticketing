@@ -5,6 +5,7 @@ from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
 from backend.settings import sendMail, sendResponse ,disconnectDB, connectDB, resultMessages,generateStr
+# import qrcode
 
 def dt_create_event(request):
     jsons =json.loads(request.body)
@@ -119,12 +120,7 @@ def dt_booking(request):
         cursor = myConn.cursor() # cursor uusgej baina
         query = F"""INSERT INTO bookings (userid, tickettypeid, quantity, totalprice, status, bookingdate)
         VALUES 
-        ({uid},
-        {ttype},
-        {quantity},
-        {tprice},
-        '{status}',
-        NOW())
+        ({uid}, {ttype}, {quantity}, {tprice},'{status}', NOW())
         RETURNING tickettypeid;""" 
         #print(query)
         cursor.execute(query) # executing query
@@ -187,6 +183,7 @@ def dt_add(request):
     action = jsons["action"]
     try:
         tid = jsons["tid"]
+        amount = jsons['seats']
     
     except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
         action = jsons['action']
@@ -199,8 +196,8 @@ def dt_add(request):
         cursor = myConn.cursor() # cursor uusgej baina
         query = F"""
 UPDATE tickettypes 
-SET availableseat = availableseat - 1 
-WHERE tickettypeid = {tid} AND availableseat >= 1;
+SET availableseat = availableseat - {amount} 
+WHERE tickettypeid = {tid} AND availableseat >= {amount};
 """ 
         #print(query)
         cursor.execute(query) # executing query
@@ -221,6 +218,119 @@ WHERE tickettypeid = {tid} AND availableseat >= 1;
         disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
         return resp # response bustaaj baina
 
+def dt_avialable_seats(request):
+    jsons =json.loads(request.body)
+    action = jsons["action"]
+    try:
+        tid = jsons["tid"]
+    
+    except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
+        action = jsons['action']
+        respdata = []
+        resp = sendResponse(request, 3006, respdata, action) # response beldej baina. 6 keytei.
+        return resp
+    
+    try: 
+        myConn = connectDB() # database holbolt uusgej baina
+        cursor = myConn.cursor() # cursor uusgej baina
+        query = F"""
+SELECT tickettypeid, availableseat 
+FROM tickettypes
+WHERE tickettypeid = {tid}
+"""
+        #print(query)
+        cursor.execute(query) # executing query
+        myConn.commit()
+        print(cursor.description)
+        columns = cursor.description
+        respRow = [{columns[index][0]: column for index, column in enumerate(value)} for value in cursor.fetchall()]
+        if cursor.rowcount == 0:
+            resp = sendResponse(request, 201, [], action)
+        else:
+            resp = sendResponse(request, 200, respRow, action)
+        # resp = sendResponse(request, 200, respdata, action)
+        cursor.close() # close the cursor. ALWAYS
+    except:
+        action = jsons["action"]
+        respdata = [] # hooson data bustaana.
+        resp = sendResponse(request, 5000, respdata, action) # standartiin daguu 6 key-tei response butsaana
+        
+    finally:
+        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
+        return resp # response bustaaj baina
+
+# def dt_create_qr(request):
+#     jsons = json.loads(request.body) # get request body
+#     action = jsons["action"] # get action key from jsons
+#     try :
+#         tid = jsons["tid"] # get gmail key from jsons and lower
+#         username = jsons["username"].capitalize() # get username key from jsons and capitalize
+#         password = jsons["password"] # get password key from jsons
+#     except:
+#         # gmail, password, username key ali neg ni baihgui bol aldaanii medeelel butsaana
+#         action = jsons['action']
+#         respdata = []
+#         resp = sendResponse(request, 3007, respdata, action) # response beldej baina. 6 keytei.
+#         return resp
+    
+#     try:
+#         conn = connectDB() # database holbolt uusgej baina
+#         cursor = conn.cursor() # cursor uusgej baina
+#         # Shineer burtguulj baigaa hereglegch burtguuleh bolomjtoi esehiig shalgaj baina
+#         query = F"SELECT COUNT(*) AS usercount FROM users WHERE gmail = '{gmail}' AND is_verified = True"
+#         # print (query)
+#         cursor.execute(query) # executing query
+#         # print(cursor.description)
+#         columns = cursor.description #
+#         respRow = [{columns[index][0]:column for index, 
+#             column in enumerate(value)} for value in cursor.fetchall()] # respRow is list and elements are dictionary. dictionary structure is columnName : value
+#         print(respRow)
+#         cursor.close() # close the cursor. ALWAYS
+
+#         if respRow[0]["usercount"] == 0: # verified user oldoogui uyd ajillana
+#             cursor1 = conn.cursor() # creating cursor1
+#             # Insert user to users
+#             query = F"""INSERT INTO users(gmail, username, password, is_verified, is_banned, create_date, last_login) 
+#                         VALUES('{gmail}','{username}', '{password}',
+#                         False, False, NOW(), '1970-01-01') 
+#             RETURNING uid"""
+#             print(query)
+            
+#             cursor1.execute(query) # executing cursor1
+#             uid = cursor1.fetchone()[0] # Returning newly inserted (uid)
+#             print(uid, "uid")
+#             conn.commit() # updating database
+            
+#             token = generateStr(20) # generating token 20 urttai
+#             query = F"""INSERT INTO qrz(tid, qrtoken, imagepath, end_date, create_date) 
+#             VALUES({tid}, '{token}', NOW() + interval \'1 day\', NOW() )""" # Inserting t_token
+#             print(query)
+#             cursor1.execute(query) # executing cursor1
+#             conn.commit() # updating database
+#             cursor1.close() # closing cursor1
+            
+#             subject = "User burtgel batalgaajuulah mail"
+#             bodyHTML = F"""<a target='_blank' href='http://localhost:8000/user/?token={token}'>CLICK ME to acivate your account</a>"""
+#             # bodyHTML = F""""""
+#             sendMail(gmail,subject,bodyHTML)
+            
+#             action = jsons['action']
+#             # register service success response with data
+#             respdata = [{"gmail":gmail,"username":username}]
+#             resp = sendResponse(request, 200, respdata, action) # response beldej baina. 6 keytei.
+#         else:
+#             action = jsons['action']
+#             respdata = [{"gmail":gmail, "username":username}]
+#             resp = sendResponse(request, 3008, respdata, action) # response beldej baina. 6 keytei.
+#     except (Exception) as e:
+#         # register service deer aldaa garval ajillana. 
+#         action = jsons["action"]
+#         respdata = [{"aldaa":str(e)}] # hooson data bustaana.
+#         resp = sendResponse(request, 5002, respdata, action) # standartiin daguu 6 key-tei response butsaana
+        
+#     finally:
+#         disconnectDB(conn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
+#         return resp # response bustaaj baina
 
 @csrf_exempt
 def EventService(request):
@@ -260,12 +370,14 @@ def EventService(request):
         elif action == "buy":
             result = dt_add(request)
             return JsonResponse(result)
+        elif action == 'avseat':
+            result = dt_avialable_seats(request)
+            return JsonResponse(result)
         else:
             action = "no action"
             respdata = []
             resp = sendResponse(request, 3001, respdata, action)
             return JsonResponse(resp)
-    
     # Method ni POST bish bol ajillana
     else:
         #GET, POST-s busad uyd ajillana

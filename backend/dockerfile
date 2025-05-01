@@ -1,21 +1,25 @@
-# Use an official Python runtime as a parent image
+# backend/Dockerfile
+
 FROM python:3.10-slim
 
-# Set the working directory in the container
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
+# Copy project files
 COPY . /app/
 
-# Install any needed packages specified in requirements.txt
+# Install Python dependencies
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
-# Expose port 8000 for Django
+# Expose port (optional, depending on your Django settings)
 EXPOSE 8000
 
-# Set the environment variable for Django settings module
-ENV DJANGO_SETTINGS_MODULE=myproject.settings
-
-# Command to run the Django app
+# Command to run your app (you might have this already)
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

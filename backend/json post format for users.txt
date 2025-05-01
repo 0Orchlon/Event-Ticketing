@@ -43,3 +43,7 @@ localhost:8000/user/
 	
 localhost:8000/eventapi/
 
+{
+    "action":"",
+    
+}
