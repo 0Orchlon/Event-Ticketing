@@ -1,3 +1,5 @@
+# eventhands.py
+import smtplib
 from django.http.response import JsonResponse
 from django.shortcuts import render
 from datetime import datetime
@@ -5,7 +7,50 @@ from django.http import JsonResponse
 import json
 from django.views.decorators.csrf import csrf_exempt
 from backend.settings import sendMail, sendResponse ,disconnectDB, connectDB, resultMessages,generateStr
-# import qrcode
+import qrcode
+import base64
+from io import BytesIO
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
+
+
+def generate_qr_code(data: str) -> BytesIO:
+    qr = qrcode.make(data)
+    buffer = BytesIO()
+    qr.save(buffer, format="PNG")
+    buffer.seek(0)
+    return buffer  # raw bytes
+
+# === Email Sending ===
+def send_ticket_email(to_email: str, subject: str, body_text: str, qr_img_bytes: BytesIO):
+    
+    msg = MIMEMultipart('related')
+    msg['To'] = to_email
+    msg['From'] = "testmail@mandakh.edu.mn"
+    msg['Subject'] = subject
+
+    # Create the HTML content with CID reference
+    bodyHTML = f"""
+    <html>
+        <body>
+            <p>{body_text}</p>
+            <p>Here is your ticket QR code:</p>
+            <img src="cid:ticketqr">
+        </body>
+    </html>
+    """
+    msg.attach(MIMEText(bodyHTML, 'html'))
+
+    # Attach the image with CID
+    qr_img_bytes.seek(0)
+    image = MIMEImage(qr_img_bytes.read(), name="ticket.png")
+    image.add_header('Content-ID', '<ticketqr>')
+    msg.attach(image)
+
+    # Send using your settings.py sendMail
+    sendMail(to_email, subject, msg.as_string())
+
 
 def dt_create_event(request):
     jsons =json.loads(request.body)
@@ -129,6 +174,7 @@ def dt_booking(request):
         myConn.commit()
         resp = sendResponse(request, 200, respRow, action)
         cursor.close() # close the cursor. ALWAYS
+        
     except:
         action = jsons["action"]
         respdata = [] # hooson data bustaana.
