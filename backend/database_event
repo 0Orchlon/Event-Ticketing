@@ -1,0 +1,1502 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 17.4 (Ubuntu 17.4-1.pgdg24.04+2)
+-- Dumped by pg_dump version 17.4 (Ubuntu 17.4-1.pgdg24.04+2)
+
+-- Started on 2025-05-05 14:04:48 +08
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- TOC entry 877 (class 1247 OID 17031)
+-- Name: booking_status; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.booking_status AS ENUM (
+    'Pending',
+    'Confirmed',
+    'Cancelled'
+);
+
+
+ALTER TYPE public.booking_status OWNER TO postgres;
+
+--
+-- TOC entry 880 (class 1247 OID 17038)
+-- Name: user_role; Type: TYPE; Schema: public; Owner: postgres
+--
+
+CREATE TYPE public.user_role AS ENUM (
+    'Customer',
+    'EventOrganizer',
+    'Admin'
+);
+
+
+ALTER TYPE public.user_role OWNER TO postgres;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- TOC entry 232 (class 1259 OID 17179)
+-- Name: auditlog; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.auditlog (
+    logid integer NOT NULL,
+    userid integer,
+    action character varying(50) NOT NULL,
+    tablename character varying(50) NOT NULL,
+    recordid integer,
+    details text,
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.auditlog OWNER TO postgres;
+
+--
+-- TOC entry 231 (class 1259 OID 17178)
+-- Name: auditlog_logid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.auditlog_logid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.auditlog_logid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3624 (class 0 OID 0)
+-- Dependencies: 231
+-- Name: auditlog_logid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.auditlog_logid_seq OWNED BY public.auditlog.logid;
+
+
+--
+-- TOC entry 230 (class 1259 OID 17164)
+-- Name: authauditlog; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.authauditlog (
+    auditid integer NOT NULL,
+    userid integer,
+    actiontype character varying(20) NOT NULL,
+    ipaddress inet,
+    useragent text,
+    success boolean NOT NULL,
+    createdat timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+);
+
+
+ALTER TABLE public.authauditlog OWNER TO postgres;
+
+--
+-- TOC entry 229 (class 1259 OID 17163)
+-- Name: authauditlog_auditid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.authauditlog_auditid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.authauditlog_auditid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3625 (class 0 OID 0)
+-- Dependencies: 229
+-- Name: authauditlog_auditid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.authauditlog_auditid_seq OWNED BY public.authauditlog.auditid;
+
+
+--
+-- TOC entry 248 (class 1259 OID 17672)
+-- Name: booking; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.booking (
+    bookingid integer NOT NULL,
+    userid integer NOT NULL,
+    ticketid integer NOT NULL,
+    booking_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    payment_status character varying(20) DEFAULT 'pending'::character varying
+);
+
+
+ALTER TABLE public.booking OWNER TO postgres;
+
+--
+-- TOC entry 247 (class 1259 OID 17671)
+-- Name: booking_bookingid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.booking_bookingid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.booking_bookingid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3626 (class 0 OID 0)
+-- Dependencies: 247
+-- Name: booking_bookingid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.booking_bookingid_seq OWNED BY public.booking.bookingid;
+
+
+--
+-- TOC entry 226 (class 1259 OID 17124)
+-- Name: bookings; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.bookings (
+    bookingid integer NOT NULL,
+    userid integer NOT NULL,
+    tickettypeid integer NOT NULL,
+    quantity integer NOT NULL,
+    totalprice numeric(10,2) NOT NULL,
+    bookingdate timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    status public.booking_status DEFAULT 'Confirmed'::public.booking_status,
+    CONSTRAINT bookings_quantity_check CHECK ((quantity > 0)),
+    CONSTRAINT bookings_totalprice_check CHECK ((totalprice >= (0)::numeric))
+);
+
+
+ALTER TABLE public.bookings OWNER TO postgres;
+
+--
+-- TOC entry 225 (class 1259 OID 17123)
+-- Name: bookings_bookingid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.bookings_bookingid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.bookings_bookingid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3627 (class 0 OID 0)
+-- Dependencies: 225
+-- Name: bookings_bookingid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.bookings_bookingid_seq OWNED BY public.bookings.bookingid;
+
+
+--
+-- TOC entry 242 (class 1259 OID 17638)
+-- Name: event; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.event (
+    eventid integer NOT NULL,
+    name character varying(255) NOT NULL,
+    description text,
+    venue character varying(255),
+    start_time timestamp without time zone NOT NULL,
+    end_time timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE public.event OWNER TO postgres;
+
+--
+-- TOC entry 241 (class 1259 OID 17637)
+-- Name: event_eventid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.event_eventid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.event_eventid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3628 (class 0 OID 0)
+-- Dependencies: 241
+-- Name: event_eventid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.event_eventid_seq OWNED BY public.event.eventid;
+
+
+--
+-- TOC entry 244 (class 1259 OID 17647)
+-- Name: event_images; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.event_images (
+    imageid integer NOT NULL,
+    eventid integer NOT NULL,
+    image_path character varying(255) NOT NULL
+);
+
+
+ALTER TABLE public.event_images OWNER TO postgres;
+
+--
+-- TOC entry 243 (class 1259 OID 17646)
+-- Name: event_images_imageid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.event_images_imageid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.event_images_imageid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3629 (class 0 OID 0)
+-- Dependencies: 243
+-- Name: event_images_imageid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.event_images_imageid_seq OWNED BY public.event_images.imageid;
+
+
+--
+-- TOC entry 222 (class 1259 OID 17091)
+-- Name: events; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.events (
+    eventid integer NOT NULL,
+    venueid integer NOT NULL,
+    name character varying(255) NOT NULL,
+    start_time date NOT NULL,
+    description character varying(255),
+    end_time date,
+    created_at date,
+    updated_at date
+);
+
+
+ALTER TABLE public.events OWNER TO postgres;
+
+--
+-- TOC entry 221 (class 1259 OID 17090)
+-- Name: events_eventid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.events_eventid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.events_eventid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3630 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: events_eventid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.events_eventid_seq OWNED BY public.events.eventid;
+
+
+--
+-- TOC entry 240 (class 1259 OID 17565)
+-- Name: imgz; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.imgz (
+    id integer NOT NULL,
+    eid integer,
+    imgpath text
+);
+
+
+ALTER TABLE public.imgz OWNER TO postgres;
+
+--
+-- TOC entry 239 (class 1259 OID 17564)
+-- Name: imgz_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.imgz ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.imgz_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 228 (class 1259 OID 17150)
+-- Name: paymentmethods; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.paymentmethods (
+    paymentmethodid integer NOT NULL,
+    userid integer NOT NULL,
+    provider character varying(50) NOT NULL,
+    token character varying(255) NOT NULL,
+    createdate timestamp without time zone
+);
+
+
+ALTER TABLE public.paymentmethods OWNER TO postgres;
+
+--
+-- TOC entry 227 (class 1259 OID 17149)
+-- Name: paymentmethods_paymentmethodid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.paymentmethods_paymentmethodid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.paymentmethods_paymentmethodid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3631 (class 0 OID 0)
+-- Dependencies: 227
+-- Name: paymentmethods_paymentmethodid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.paymentmethods_paymentmethodid_seq OWNED BY public.paymentmethods.paymentmethodid;
+
+
+--
+-- TOC entry 236 (class 1259 OID 17544)
+-- Name: paymentmethods_paymentmethodid_seq1; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.paymentmethods ALTER COLUMN paymentmethodid ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.paymentmethods_paymentmethodid_seq1
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 238 (class 1259 OID 17546)
+-- Name: qrz; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.qrz (
+    qrid integer NOT NULL,
+    tid integer,
+    qrtoken character varying(50),
+    imagepath text,
+    create_date timestamp(6) without time zone,
+    end_date timestamp(6) without time zone,
+    used boolean DEFAULT false,
+    eid integer
+);
+
+
+ALTER TABLE public.qrz OWNER TO postgres;
+
+--
+-- TOC entry 237 (class 1259 OID 17545)
+-- Name: qrz_qrid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.qrz ALTER COLUMN qrid ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.qrz_qrid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 233 (class 1259 OID 17198)
+-- Name: t_token; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.t_token (
+    tid bigint NOT NULL,
+    token character varying(255),
+    uid integer,
+    token_type character varying(255),
+    create_date date,
+    end_date date
+);
+
+
+ALTER TABLE public.t_token OWNER TO postgres;
+
+--
+-- TOC entry 235 (class 1259 OID 17232)
+-- Name: t_token_tid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.t_token ALTER COLUMN tid ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.t_token_tid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    MAXVALUE 9999999999
+    CACHE 1
+);
+
+
+--
+-- TOC entry 246 (class 1259 OID 17659)
+-- Name: ticket; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.ticket (
+    ticketid integer NOT NULL,
+    eventid integer NOT NULL,
+    seat character varying(50),
+    price numeric(10,2) NOT NULL,
+    booked boolean DEFAULT false,
+    "row" integer DEFAULT 0,
+    col integer DEFAULT 0
+);
+
+
+ALTER TABLE public.ticket OWNER TO postgres;
+
+--
+-- TOC entry 245 (class 1259 OID 17658)
+-- Name: ticket_ticketid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.ticket_ticketid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.ticket_ticketid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3632 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: ticket_ticketid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.ticket_ticketid_seq OWNED BY public.ticket.ticketid;
+
+
+--
+-- TOC entry 224 (class 1259 OID 17110)
+-- Name: tickettypes; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.tickettypes (
+    tickettypeid integer NOT NULL,
+    eventid integer NOT NULL,
+    typename character varying(50) NOT NULL,
+    price integer NOT NULL,
+    quantityavailable integer NOT NULL,
+    availableseat integer,
+    CONSTRAINT tickettypes_price_check CHECK (((price)::numeric >= (0)::numeric)),
+    CONSTRAINT tickettypes_quantityavailable_check CHECK ((quantityavailable >= 0))
+);
+
+
+ALTER TABLE public.tickettypes OWNER TO postgres;
+
+--
+-- TOC entry 223 (class 1259 OID 17109)
+-- Name: tickettypes_tickettypeid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.tickettypes_tickettypeid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.tickettypes_tickettypeid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3633 (class 0 OID 0)
+-- Dependencies: 223
+-- Name: tickettypes_tickettypeid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.tickettypes_tickettypeid_seq OWNED BY public.tickettypes.tickettypeid;
+
+
+--
+-- TOC entry 220 (class 1259 OID 17056)
+-- Name: users; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.users (
+    uid integer NOT NULL,
+    username character varying(50) NOT NULL,
+    gmail character varying(100) NOT NULL,
+    password character varying(255) NOT NULL,
+    firstname character varying(50),
+    lastname character varying(50),
+    phonenumber character varying(20),
+    create_date timestamp with time zone,
+    last_login timestamp with time zone,
+    profilepictureurl text,
+    role public.user_role,
+    is_verified boolean,
+    is_banned boolean,
+    is_admin boolean DEFAULT false
+);
+
+
+ALTER TABLE public.users OWNER TO postgres;
+
+--
+-- TOC entry 234 (class 1259 OID 17231)
+-- Name: users_uid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+ALTER TABLE public.users ALTER COLUMN uid ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.users_uid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 219 (class 1259 OID 17055)
+-- Name: users_userid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.users_userid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.users_userid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3634 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: users_userid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.users_userid_seq OWNED BY public.users.uid;
+
+
+--
+-- TOC entry 218 (class 1259 OID 17046)
+-- Name: venue; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.venue (
+    venueid integer NOT NULL,
+    name character varying(100) NOT NULL,
+    address text NOT NULL,
+    capacity integer NOT NULL,
+    CONSTRAINT venue_capacity_check CHECK ((capacity > 0))
+);
+
+
+ALTER TABLE public.venue OWNER TO postgres;
+
+--
+-- TOC entry 217 (class 1259 OID 17045)
+-- Name: venue_venueid_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.venue_venueid_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.venue_venueid_seq OWNER TO postgres;
+
+--
+-- TOC entry 3635 (class 0 OID 0)
+-- Dependencies: 217
+-- Name: venue_venueid_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.venue_venueid_seq OWNED BY public.venue.venueid;
+
+
+--
+-- TOC entry 3377 (class 2604 OID 17182)
+-- Name: auditlog logid; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.auditlog ALTER COLUMN logid SET DEFAULT nextval('public.auditlog_logid_seq'::regclass);
+
+
+--
+-- TOC entry 3375 (class 2604 OID 17167)
+-- Name: authauditlog auditid; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.authauditlog ALTER COLUMN auditid SET DEFAULT nextval('public.authauditlog_auditid_seq'::regclass);
+
+
+--
+-- TOC entry 3386 (class 2604 OID 17675)
+-- Name: booking bookingid; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.booking ALTER COLUMN bookingid SET DEFAULT nextval('public.booking_bookingid_seq'::regclass);
+
+
+--
+-- TOC entry 3372 (class 2604 OID 17127)
+-- Name: bookings bookingid; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.bookings ALTER COLUMN bookingid SET DEFAULT nextval('public.bookings_bookingid_seq'::regclass);
+
+
+--
+-- TOC entry 3380 (class 2604 OID 17641)
+-- Name: event eventid; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.event ALTER COLUMN eventid SET DEFAULT nextval('public.event_eventid_seq'::regclass);
+
+
+--
+-- TOC entry 3381 (class 2604 OID 17650)
+-- Name: event_images imageid; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.event_images ALTER COLUMN imageid SET DEFAULT nextval('public.event_images_imageid_seq'::regclass);
+
+
+--
+-- TOC entry 3370 (class 2604 OID 17094)
+-- Name: events eventid; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.events ALTER COLUMN eventid SET DEFAULT nextval('public.events_eventid_seq'::regclass);
+
+
+--
+-- TOC entry 3382 (class 2604 OID 17662)
+-- Name: ticket ticketid; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ticket ALTER COLUMN ticketid SET DEFAULT nextval('public.ticket_ticketid_seq'::regclass);
+
+
+--
+-- TOC entry 3371 (class 2604 OID 17113)
+-- Name: tickettypes tickettypeid; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tickettypes ALTER COLUMN tickettypeid SET DEFAULT nextval('public.tickettypes_tickettypeid_seq'::regclass);
+
+
+--
+-- TOC entry 3368 (class 2604 OID 17049)
+-- Name: venue venueid; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.venue ALTER COLUMN venueid SET DEFAULT nextval('public.venue_venueid_seq'::regclass);
+
+
+--
+-- TOC entry 3602 (class 0 OID 17179)
+-- Dependencies: 232
+-- Data for Name: auditlog; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.auditlog (logid, userid, action, tablename, recordid, details, createdat) FROM stdin;
+\.
+
+
+--
+-- TOC entry 3600 (class 0 OID 17164)
+-- Dependencies: 230
+-- Data for Name: authauditlog; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.authauditlog (auditid, userid, actiontype, ipaddress, useragent, success, createdat) FROM stdin;
+\.
+
+
+--
+-- TOC entry 3618 (class 0 OID 17672)
+-- Dependencies: 248
+-- Data for Name: booking; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.booking (bookingid, userid, ticketid, booking_time, payment_status) FROM stdin;
+\.
+
+
+--
+-- TOC entry 3596 (class 0 OID 17124)
+-- Dependencies: 226
+-- Data for Name: bookings; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.bookings (bookingid, userid, tickettypeid, quantity, totalprice, bookingdate, status) FROM stdin;
+\.
+
+
+--
+-- TOC entry 3612 (class 0 OID 17638)
+-- Dependencies: 242
+-- Data for Name: event; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.event (eventid, name, description, venue, start_time, end_time) FROM stdin;
+7	qqqqqqqqqqqqqqqqq	qqqqqqqqqqqqqqqqq	1	2025-05-20 20:52:00	2025-05-24 20:52:00
+8	qqqqqqqqqqqqqqqqq	qqqqqqqqqqqqqqqqq	1	2025-05-20 20:52:00	2025-05-24 20:52:00
+9	after darkzz	song perfoemed bu mr kittyzzzz	1	2025-05-24 23:50:00	2025-05-24 00:00:00
+4	id4 somehow	1234123	1	2025-05-31 14:42:00	2025-05-31 20:36:00
+10	azxswq	qwaszx	1	2025-05-06 13:31:00	2025-05-07 13:31:00
+11	mnbv	mnbv	1	2025-05-15 13:36:00	2025-05-16 13:36:00
+12	test123	pppppp	1	2025-05-15 05:42:00	2025-05-07 13:39:00
+\.
+
+
+--
+-- TOC entry 3614 (class 0 OID 17647)
+-- Dependencies: 244
+-- Data for Name: event_images; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.event_images (imageid, eventid, image_path) FROM stdin;
+5	7	media/events/1746363463_lab8.png
+6	8	media/events/1746363497_a_motorcycle_parked_outside_a_restaurant.jpg
+7	8	media/events/1746363497_a_screen_shot_of_a_computer_01.jpg
+8	8	media/events/1746363497_a_screenshot_of_a_computer.jpg
+9	8	media/events/1746363497_a_skeleton_with_a_skull_and_arms.jpg
+10	9	media/events/1746367630_Screenshot from 2024-11-21 14-53-04.png
+11	9	media/events/1746367630_Screenshot from 2024-11-27 13-45-08.png
+12	9	media/events/1746367630_Screenshot from 2024-11-27 13-47-26.png
+13	9	media/events/1746367630_Screenshot from 2024-11-27 14-14-36.png
+14	9	media/events/1746367630_Screenshot from 2024-12-04 14-07-41.png
+15	9	media/events/1746367630_Screenshot from 2025-02-13 19-22-55.png
+22	4	media/events/1746421980_a_motorcycle_parked_outside_a_restaurant.jpg
+23	10	media/events/1746423115_a_motorcycle_parked_outside_a_restaurant.jpg
+24	10	media/events/1746423115_a_screen_shot_of_a_computer_01.jpg
+25	10	media/events/1746423115_a_screenshot_of_a_computer.jpg
+26	10	media/events/1746423115_a_skeleton_with_a_skull_and_arms.jpg
+27	10	media/events/1746423115_a_street_with_buildings_and_signs.png
+28	11	media/events/1746423449_a_street_with_buildings_and_signs.png
+29	12	media/events/1746423556_a_motorcycle_parked_outside_a_restaurant.jpg
+30	12	media/events/1746423556_a_screen_shot_of_a_computer_01.jpg
+31	12	media/events/1746423556_a_screenshot_of_a_computer.jpg
+32	12	media/events/1746423556_a_skeleton_with_a_skull_and_arms.jpg
+33	12	media/events/1746423556_a_street_with_buildings_and_signs.png
+34	12	media/events/1746423556_lab8.png
+35	12	media/events/1746423556_lab8flutter.PNG
+36	12	media/events/1746423556_racing-car-149034_1280.png
+37	12	media/events/1746423556_racing-car-149034_1280123.png
+\.
+
+
+--
+-- TOC entry 3592 (class 0 OID 17091)
+-- Dependencies: 222
+-- Data for Name: events; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.events (eventid, venueid, name, start_time, description, end_time, created_at, updated_at) FROM stdin;
+1	1	gibrs	2025-05-05	easfw	2025-05-05	2025-04-14	2025-04-14
+8	1	test1	2025-05-05	testing	2025-05-05	2025-04-14	2025-04-14
+9	1	test1	2025-05-05	testing	2025-05-05	2025-04-14	2025-04-14
+10	1	test2	2025-05-05	testing2	2025-05-10	2025-04-20	2025-04-20
+11	1	asdfgh	2025-05-06	qwerty	2025-05-31	2025-05-04	2025-05-04
+\.
+
+
+--
+-- TOC entry 3610 (class 0 OID 17565)
+-- Dependencies: 240
+-- Data for Name: imgz; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.imgz (id, eid, imgpath) FROM stdin;
+\.
+
+
+--
+-- TOC entry 3598 (class 0 OID 17150)
+-- Dependencies: 228
+-- Data for Name: paymentmethods; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.paymentmethods (paymentmethodid, userid, provider, token, createdate) FROM stdin;
+\.
+
+
+--
+-- TOC entry 3608 (class 0 OID 17546)
+-- Dependencies: 238
+-- Data for Name: qrz; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.qrz (qrid, tid, qrtoken, imagepath, create_date, end_date, used, eid) FROM stdin;
+\.
+
+
+--
+-- TOC entry 3603 (class 0 OID 17198)
+-- Dependencies: 233
+-- Data for Name: t_token; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.t_token (tid, token, uid, token_type, create_date, end_date) FROM stdin;
+2	gszxl0unkp5se0cxoowz	4	register	2025-03-17	2025-03-18
+3	p6wotqjd0ui12wjaduvd	5	register	2025-03-17	2025-03-18
+4	51uhfhtpmwbfsmmv73od	6	register	2025-03-17	2025-03-18
+5	2p0io2b2a6s0yokp4hsr	7	register	2025-03-17	2025-03-18
+6	s6dow5ktb72hkwgtw696c76t3	3	forgot	2025-04-14	2025-04-15
+8	lj4b867diqot80sb0xsvtw3ph44qmodfv7h0yj4t	8	forgot	2025-04-21	1970-01-01
+9	y7w38heuk4c2vpmtohw32uvh296x0i	9	register	2025-05-04	1970-01-01
+\.
+
+
+--
+-- TOC entry 3616 (class 0 OID 17659)
+-- Dependencies: 246
+-- Data for Name: ticket; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.ticket (ticketid, eventid, seat, price, booked, "row", col) FROM stdin;
+5	9	A1	50.00	f	0	0
+6	9	A2	50.00	f	0	1
+7	9	B1	50.00	f	1	0
+8	9	B2	50.00	t	1	1
+9	10	15	2500.00	f	0	0
+10	11	A1	2500.00	f	0	0
+11	11	B1	2500.00	f	0	0
+12	11	C1	2500.00	f	0	0
+13	11	D1	2500.00	f	0	0
+14	11	E1	2500.00	f	0	0
+15	11	F1	2500.00	f	0	0
+16	11	G1	2500.00	f	0	0
+17	11	H1	2500.00	f	0	0
+18	11	I1	2500.00	f	0	0
+19	11	J1	2500.00	f	0	0
+20	11	K1	2500.00	f	0	0
+21	11	L1	2500.00	f	0	0
+22	11	M1	2500.00	f	0	0
+23	11	N1	2500.00	f	0	0
+24	11	O1	2500.00	f	0	0
+25	11	A1	2500.00	f	0	0
+26	11	B1	2500.00	f	0	0
+27	11	C1	2500.00	f	0	0
+28	11	D1	2500.00	f	0	0
+29	11	E1	2500.00	f	0	0
+30	11	F1	2500.00	f	0	0
+31	11	G1	2500.00	f	0	0
+32	11	H1	2500.00	f	0	0
+33	11	I1	2500.00	f	0	0
+34	11	J1	2500.00	f	0	0
+35	11	K1	2500.00	f	0	0
+36	11	L1	2500.00	f	0	0
+37	11	M1	2500.00	f	0	0
+38	11	N1	2500.00	f	0	0
+39	11	O1	2500.00	f	0	0
+40	11	A1	2500.00	f	0	0
+41	11	B1	2500.00	f	0	0
+42	11	C1	2500.00	f	0	0
+43	11	D1	2500.00	f	0	0
+44	11	E1	2500.00	f	0	0
+45	11	F1	2500.00	f	0	0
+46	11	G1	2500.00	f	0	0
+47	11	H1	2500.00	f	0	0
+48	11	I1	2500.00	f	0	0
+49	11	J1	2500.00	f	0	0
+50	11	K1	2500.00	f	0	0
+51	11	L1	2500.00	f	0	0
+52	11	M1	2500.00	f	0	0
+53	11	N1	2500.00	f	0	0
+54	11	O1	2500.00	f	0	0
+55	11	A1	2500.00	f	0	0
+56	11	B1	2500.00	f	0	0
+57	11	C1	2500.00	f	0	0
+58	11	D1	2500.00	f	0	0
+59	11	E1	2500.00	f	0	0
+60	11	F1	2500.00	f	0	0
+61	11	G1	2500.00	f	0	0
+62	11	H1	2500.00	f	0	0
+63	11	I1	2500.00	f	0	0
+64	11	J1	2500.00	f	0	0
+65	11	K1	2500.00	f	0	0
+66	12	A1	250.00	f	0	0
+67	12	B1	250.00	f	0	0
+68	12	C1	250.00	f	0	0
+69	12	D1	250.00	f	0	0
+70	12	E1	250.00	f	0	0
+\.
+
+
+--
+-- TOC entry 3594 (class 0 OID 17110)
+-- Dependencies: 224
+-- Data for Name: tickettypes; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.tickettypes (tickettypeid, eventid, typename, price, quantityavailable, availableseat) FROM stdin;
+3	1	regs	500	10	10
+4	8	regular	5000	50	50
+6	8	regular	5000	50	0
+5	8	regular	5000	50	47
+\.
+
+
+--
+-- TOC entry 3590 (class 0 OID 17056)
+-- Dependencies: 220
+-- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.users (uid, username, gmail, password, firstname, lastname, phonenumber, create_date, last_login, profilepictureurl, role, is_verified, is_banned, is_admin) FROM stdin;
+2	Orchlon	sw22d045@mandakh.edu.mn	12345	\N	\N	\N	2025-03-17 14:18:28.70599+08	1970-01-01 00:00:00+07	\N	\N	f	f	f
+4	Orchlon	sw22d045@mandakh.edu.mn	12345	\N	\N	\N	2025-03-17 14:20:27.568143+08	1970-01-01 00:00:00+07	\N	\N	f	f	f
+6	Orchlon	sw22d045@mandakh.edu.mn	12345	\N	\N	\N	2025-03-17 14:27:27.529438+08	1970-01-01 00:00:00+07	\N	\N	f	f	f
+7	Orchlon	sw22d045@mandakh.edu.mn	12345	\N	\N	\N	2025-03-17 14:28:10.191558+08	1970-01-01 00:00:00+07	\N	\N	f	f	f
+8	Orchlon	get@gg.com	4321	\N	\N	\N	2025-04-21 13:39:44.989244+08	2025-04-21 14:16:26.68336+08	\N	\N	t	f	t
+5	Orchlon	sw22d045@mandakh.edu.mn	12345	\N	\N	\N	2025-03-17 14:21:41.669369+08	1970-01-01 00:00:00+07	\N	\N	f	f	t
+3	Orchlon	sw22d045@mandakh.edu.mn	12345	\N	\N	\N	2025-03-17 14:18:35.175+08	1970-01-01 00:00:00+07	\N	\N	f	f	f
+9	Qwerty	sw22d045@mandakh.edu.mn	d8578edf8458ce06fbc5bb76a58c5ca4	\N	\N	\N	2025-05-04 18:35:07.542452+08	2025-05-04 18:49:12.297679+08	\N	\N	t	f	t
+\.
+
+
+--
+-- TOC entry 3588 (class 0 OID 17046)
+-- Dependencies: 218
+-- Data for Name: venue; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.venue (venueid, name, address, capacity) FROM stdin;
+1	HQ	NOw	1500
+\.
+
+
+--
+-- TOC entry 3636 (class 0 OID 0)
+-- Dependencies: 231
+-- Name: auditlog_logid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.auditlog_logid_seq', 1, false);
+
+
+--
+-- TOC entry 3637 (class 0 OID 0)
+-- Dependencies: 229
+-- Name: authauditlog_auditid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.authauditlog_auditid_seq', 1, false);
+
+
+--
+-- TOC entry 3638 (class 0 OID 0)
+-- Dependencies: 247
+-- Name: booking_bookingid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.booking_bookingid_seq', 1, false);
+
+
+--
+-- TOC entry 3639 (class 0 OID 0)
+-- Dependencies: 225
+-- Name: bookings_bookingid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.bookings_bookingid_seq', 1, false);
+
+
+--
+-- TOC entry 3640 (class 0 OID 0)
+-- Dependencies: 241
+-- Name: event_eventid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.event_eventid_seq', 12, true);
+
+
+--
+-- TOC entry 3641 (class 0 OID 0)
+-- Dependencies: 243
+-- Name: event_images_imageid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.event_images_imageid_seq', 37, true);
+
+
+--
+-- TOC entry 3642 (class 0 OID 0)
+-- Dependencies: 221
+-- Name: events_eventid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.events_eventid_seq', 11, true);
+
+
+--
+-- TOC entry 3643 (class 0 OID 0)
+-- Dependencies: 239
+-- Name: imgz_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.imgz_id_seq', 1, false);
+
+
+--
+-- TOC entry 3644 (class 0 OID 0)
+-- Dependencies: 227
+-- Name: paymentmethods_paymentmethodid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.paymentmethods_paymentmethodid_seq', 1, false);
+
+
+--
+-- TOC entry 3645 (class 0 OID 0)
+-- Dependencies: 236
+-- Name: paymentmethods_paymentmethodid_seq1; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.paymentmethods_paymentmethodid_seq1', 1, false);
+
+
+--
+-- TOC entry 3646 (class 0 OID 0)
+-- Dependencies: 237
+-- Name: qrz_qrid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.qrz_qrid_seq', 1, true);
+
+
+--
+-- TOC entry 3647 (class 0 OID 0)
+-- Dependencies: 235
+-- Name: t_token_tid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.t_token_tid_seq', 9, true);
+
+
+--
+-- TOC entry 3648 (class 0 OID 0)
+-- Dependencies: 245
+-- Name: ticket_ticketid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.ticket_ticketid_seq', 70, true);
+
+
+--
+-- TOC entry 3649 (class 0 OID 0)
+-- Dependencies: 223
+-- Name: tickettypes_tickettypeid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.tickettypes_tickettypeid_seq', 6, true);
+
+
+--
+-- TOC entry 3650 (class 0 OID 0)
+-- Dependencies: 234
+-- Name: users_uid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.users_uid_seq', 9, true);
+
+
+--
+-- TOC entry 3651 (class 0 OID 0)
+-- Dependencies: 219
+-- Name: users_userid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.users_userid_seq', 5, true);
+
+
+--
+-- TOC entry 3652 (class 0 OID 0)
+-- Dependencies: 217
+-- Name: venue_venueid_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.venue_venueid_seq', 1, false);
+
+
+--
+-- TOC entry 3412 (class 2606 OID 17187)
+-- Name: auditlog auditlog_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.auditlog
+    ADD CONSTRAINT auditlog_pkey PRIMARY KEY (logid);
+
+
+--
+-- TOC entry 3410 (class 2606 OID 17172)
+-- Name: authauditlog authauditlog_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.authauditlog
+    ADD CONSTRAINT authauditlog_pkey PRIMARY KEY (auditid);
+
+
+--
+-- TOC entry 3426 (class 2606 OID 17679)
+-- Name: booking booking_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.booking
+    ADD CONSTRAINT booking_pkey PRIMARY KEY (bookingid);
+
+
+--
+-- TOC entry 3405 (class 2606 OID 17133)
+-- Name: bookings bookings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.bookings
+    ADD CONSTRAINT bookings_pkey PRIMARY KEY (bookingid);
+
+
+--
+-- TOC entry 3422 (class 2606 OID 17652)
+-- Name: event_images event_images_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.event_images
+    ADD CONSTRAINT event_images_pkey PRIMARY KEY (imageid);
+
+
+--
+-- TOC entry 3420 (class 2606 OID 17645)
+-- Name: event event_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.event
+    ADD CONSTRAINT event_pkey PRIMARY KEY (eventid);
+
+
+--
+-- TOC entry 3400 (class 2606 OID 17098)
+-- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_pkey PRIMARY KEY (eventid);
+
+
+--
+-- TOC entry 3418 (class 2606 OID 17571)
+-- Name: imgz imgz_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.imgz
+    ADD CONSTRAINT imgz_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3408 (class 2606 OID 17157)
+-- Name: paymentmethods paymentmethods_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.paymentmethods
+    ADD CONSTRAINT paymentmethods_pkey PRIMARY KEY (paymentmethodid);
+
+
+--
+-- TOC entry 3416 (class 2606 OID 17553)
+-- Name: qrz qrz_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.qrz
+    ADD CONSTRAINT qrz_pkey PRIMARY KEY (qrid);
+
+
+--
+-- TOC entry 3414 (class 2606 OID 17204)
+-- Name: t_token t_token_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.t_token
+    ADD CONSTRAINT t_token_pkey PRIMARY KEY (tid);
+
+
+--
+-- TOC entry 3424 (class 2606 OID 17665)
+-- Name: ticket ticket_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ticket
+    ADD CONSTRAINT ticket_pkey PRIMARY KEY (ticketid);
+
+
+--
+-- TOC entry 3403 (class 2606 OID 17117)
+-- Name: tickettypes tickettypes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tickettypes
+    ADD CONSTRAINT tickettypes_pkey PRIMARY KEY (tickettypeid);
+
+
+--
+-- TOC entry 3398 (class 2606 OID 17070)
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (uid);
+
+
+--
+-- TOC entry 3395 (class 2606 OID 17054)
+-- Name: venue venue_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.venue
+    ADD CONSTRAINT venue_pkey PRIMARY KEY (venueid);
+
+
+--
+-- TOC entry 3406 (class 1259 OID 17195)
+-- Name: idx_bookings_date; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_bookings_date ON public.bookings USING btree (bookingdate);
+
+
+--
+-- TOC entry 3401 (class 1259 OID 17523)
+-- Name: idx_events_datetime; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_events_datetime ON public.events USING btree (start_time);
+
+
+--
+-- TOC entry 3396 (class 1259 OID 17194)
+-- Name: idx_users_email; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_users_email ON public.users USING btree (gmail);
+
+
+--
+-- TOC entry 3433 (class 2606 OID 17188)
+-- Name: auditlog auditlog_userid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.auditlog
+    ADD CONSTRAINT auditlog_userid_fkey FOREIGN KEY (userid) REFERENCES public.users(uid) ON DELETE SET NULL;
+
+
+--
+-- TOC entry 3432 (class 2606 OID 17173)
+-- Name: authauditlog authauditlog_userid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.authauditlog
+    ADD CONSTRAINT authauditlog_userid_fkey FOREIGN KEY (userid) REFERENCES public.users(uid);
+
+
+--
+-- TOC entry 3440 (class 2606 OID 17685)
+-- Name: booking booking_ticketid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.booking
+    ADD CONSTRAINT booking_ticketid_fkey FOREIGN KEY (ticketid) REFERENCES public.ticket(ticketid) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3441 (class 2606 OID 17680)
+-- Name: booking booking_userid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.booking
+    ADD CONSTRAINT booking_userid_fkey FOREIGN KEY (userid) REFERENCES public.users(uid) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3429 (class 2606 OID 17139)
+-- Name: bookings bookings_tickettypeid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.bookings
+    ADD CONSTRAINT bookings_tickettypeid_fkey FOREIGN KEY (tickettypeid) REFERENCES public.tickettypes(tickettypeid) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3430 (class 2606 OID 17134)
+-- Name: bookings bookings_userid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.bookings
+    ADD CONSTRAINT bookings_userid_fkey FOREIGN KEY (userid) REFERENCES public.users(uid) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3438 (class 2606 OID 17653)
+-- Name: event_images event_images_eventid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.event_images
+    ADD CONSTRAINT event_images_eventid_fkey FOREIGN KEY (eventid) REFERENCES public.event(eventid) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3427 (class 2606 OID 17099)
+-- Name: events events_venueid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_venueid_fkey FOREIGN KEY (venueid) REFERENCES public.venue(venueid);
+
+
+--
+-- TOC entry 3437 (class 2606 OID 17572)
+-- Name: imgz imgz_eid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.imgz
+    ADD CONSTRAINT imgz_eid_fkey FOREIGN KEY (eid) REFERENCES public.events(eventid);
+
+
+--
+-- TOC entry 3431 (class 2606 OID 17158)
+-- Name: paymentmethods paymentmethods_userid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.paymentmethods
+    ADD CONSTRAINT paymentmethods_userid_fkey FOREIGN KEY (userid) REFERENCES public.users(uid) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3435 (class 2606 OID 17559)
+-- Name: qrz qrz_eid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.qrz
+    ADD CONSTRAINT qrz_eid_fkey FOREIGN KEY (eid) REFERENCES public.events(eventid) NOT VALID;
+
+
+--
+-- TOC entry 3436 (class 2606 OID 17554)
+-- Name: qrz qrz_tid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.qrz
+    ADD CONSTRAINT qrz_tid_fkey FOREIGN KEY (tid) REFERENCES public.tickettypes(tickettypeid);
+
+
+--
+-- TOC entry 3434 (class 2606 OID 17205)
+-- Name: t_token t_token_uid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.t_token
+    ADD CONSTRAINT t_token_uid_fkey FOREIGN KEY (uid) REFERENCES public.users(uid);
+
+
+--
+-- TOC entry 3439 (class 2606 OID 17666)
+-- Name: ticket ticket_eventid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ticket
+    ADD CONSTRAINT ticket_eventid_fkey FOREIGN KEY (eventid) REFERENCES public.event(eventid) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3428 (class 2606 OID 17118)
+-- Name: tickettypes tickettypes_eventid_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.tickettypes
+    ADD CONSTRAINT tickettypes_eventid_fkey FOREIGN KEY (eventid) REFERENCES public.events(eventid) ON DELETE CASCADE;
+
+
+-- Completed on 2025-05-05 14:04:50 +08
+
+--
+-- PostgreSQL database dump complete
+--
+

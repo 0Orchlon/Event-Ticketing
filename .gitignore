@@ -4,3 +4,5 @@
 /my-event-app/node_modules
 /backend/backend/__pycache__
 backend/backend/__pycache__/urls.cpython-312.pyc
+backend/hed/__pycache__/eventhands.cpython-312.pyc
+/backend/hed/__pycache__

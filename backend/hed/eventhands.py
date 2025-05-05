@@ -147,6 +147,7 @@ def list_events():
             FROM event e
             LEFT JOIN event_images ei ON e.eventid = ei.eventid
             GROUP BY e.eventid
+            ORDER BY e.start_time ASC
         """)
         rows = cursor.fetchall()
 
