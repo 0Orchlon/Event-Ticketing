@@ -70,6 +70,8 @@ def eventapi(request):
         return edit_event(request)
     elif action == "get_seats":
         return get_seats(request)
+    elif action == "buy_seats":
+        return buy_seats(data)
 
 
     else:
@@ -366,3 +368,38 @@ def get_seats(data):
         for r in rows
     ]
     return JsonResponse({"seats": seats})
+
+def buy_seats(data):
+    ticketids = data.get("ticketids", [])
+    userid = data.get("userid")
+    email = data.get("email")
+
+    if not ticketids:
+        return JsonResponse({"status": 400, "message": "No tickets selected"})
+
+    if not userid and not email:
+        return JsonResponse({"status": 400, "message": "User info required"})
+
+    try:
+        with connection.cursor() as cursor:
+            for tid in ticketids:
+                if userid:
+                    cursor.execute(
+                        """
+                        UPDATE ticket SET booked = TRUE, userid = %s
+                        WHERE ticketid = %s AND booked = FALSE
+                        """,
+                        [userid, tid],
+                    )
+                elif email:
+                    cursor.execute(
+                        """
+                        UPDATE ticket SET booked = TRUE, email = %s
+                        WHERE ticketid = %s AND booked = FALSE
+                        """,
+                        [email, tid],
+                    )
+        return JsonResponse({"status": 200, "message": "Tickets booked"})
+    except Exception as e:
+        print("Booking error:", e)
+        return JsonResponse({"status": 500, "message": "Server error"})
