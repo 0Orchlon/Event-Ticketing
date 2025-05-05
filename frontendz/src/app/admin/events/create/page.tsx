@@ -34,6 +34,8 @@ export default function CreateEvent() {
   };
 
   return (
+    <>
+          <a href='/admin/events'>Back</a>
     <form onSubmit={handleSubmit} className="p-6 space-y-4 max-w-xl">
       <h1 className="text-2xl font-bold">Create Event</h1>
       <input
@@ -57,7 +59,7 @@ export default function CreateEvent() {
         value={form.edateb}
         onChange={(e) => setForm({ ...form, edateb: e.target.value })}
         required
-      />
+        />
       <input
         type="datetime-local"
         className="w-full p-2 border rounded"
@@ -72,7 +74,7 @@ export default function CreateEvent() {
         value={form.vid}
         onChange={(e) => setForm({ ...form, vid: e.target.value })}
         required
-      />
+        />
       <input
         type="file"
         accept="image/*"
@@ -87,5 +89,6 @@ export default function CreateEvent() {
         Create
       </button>
     </form>
+        </>
   );
 }
