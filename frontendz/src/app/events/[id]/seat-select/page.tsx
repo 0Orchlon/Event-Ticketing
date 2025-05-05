@@ -32,6 +32,7 @@ export default function SeatSelectPage() {
 
   return (
     <div className="p-4">
+      <a href={`/events/${id}`}>Back</a>
       <h1 className="text-2xl font-bold mb-4">Select Seats for Event #{id}</h1>
       <div className="grid grid-cols-10 gap-2">
         {seats.map(seat => (

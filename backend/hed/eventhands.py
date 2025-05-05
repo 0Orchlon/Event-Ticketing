@@ -42,7 +42,7 @@ def eventapi(request):
     print(f"Received action: {action}")
 
     if action == "create_event":
-        return dt_create_event(data)
+        return dt_create_event(request)
 
     elif action == "list_events":
         return list_events()
@@ -84,26 +84,26 @@ def dt_create_event(request):
         edateb = request.POST.get("edateb")
         edatee = request.POST.get("edatee")
         venid = request.POST.get("vid")
-        images = request.FILES.getlist("images") 
-    except KeyError:
+        images = request.FILES.getlist("images")
+        seats_json = request.POST.get("seats")  # JSON list of seats (optional)
+        seats = json.loads(seats_json) if seats_json else []
+    except Exception as e:
+        print(f"[ERROR] Missing parameter: {e}")
         return sendResponse(request, 3027, [], action)
 
     try:
         myConn = connectDB()
         cursor = myConn.cursor()
 
-        # Insert event details
-        query = """
+        # Insert event
+        cursor.execute("""
             INSERT INTO event (name, description, start_time, end_time, venue)
             VALUES (%s, %s, %s, %s, %s)
             RETURNING eventid;
-        """
-        cursor.execute(query, [ename, edesc, edateb, edatee, venid])
+        """, [ename, edesc, edateb, edatee, venid])
         event_id = cursor.fetchone()[0]
 
-        # Save and insert each image
-
-        # Save and insert each image
+        # Save and insert images
         for image in images:
             filename = f"{int(timezone.now().timestamp())}_{image.name}"
             image_dir = os.path.join('media', 'events')
@@ -114,15 +114,21 @@ def dt_create_event(request):
                 for chunk in image.chunks():
                     f.write(chunk)
 
-            # Insert image path to event_images table
-                cursor.execute("""
-        INSERT INTO event_images (eventid, image_path)
-        VALUES (%s, %s)
-    """, [event_id, filepath])
+            cursor.execute("""
+                INSERT INTO event_images (eventid, image_path)
+                VALUES (%s, %s)
+            """, [event_id, filepath])
 
-# Commit AFTER both inserts
+        # Insert seats
+        for seat in seats:
+            seat_name = seat.get("seat")
+            price = seat.get("price", 0.0)
+            cursor.execute("""
+                INSERT INTO ticket (eventid, seat, price, booked)
+                VALUES (%s, %s, %s, false)
+            """, [event_id, seat_name, price])
+
         myConn.commit()
-
         cursor.close()
         resp = sendResponse(request, 200, {'eventid': event_id}, action)
 
@@ -152,7 +158,7 @@ def list_events():
             "start_time": row[3],
             "end_time": row[4],
             "venue": row[5],
-            "images": [f"/media/{path}" for path in row[6] if path] if row[6] else [],
+            "images": [f"/{path}" for path in row[6] if path] if row[6] else [],
         }
         for row in rows
     ]
