@@ -2,3 +2,4 @@
 /.vscode
 /my-event-app/node_modules
 /my-event-app/node_modules
+/backend/backend/__pycache__

@@ -1,433 +1,361 @@
-# eventhands.py
-import smtplib
-from django.http.response import JsonResponse
-from django.shortcuts import render
-from datetime import datetime
-from django.http import JsonResponse
+# eventhandle.py
+
+import os
 import json
-from django.views.decorators.csrf import csrf_exempt
-from backend.settings import sendMail, sendResponse ,disconnectDB, connectDB, resultMessages,generateStr
-import qrcode
 import base64
-from io import BytesIO
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
+from django.db import connection
+from datetime import datetime
+from django.views.decorators.csrf import csrf_exempt
+from backend.settings import connectDB, disconnectDB
+from django.utils import timezone
 
-
-def generate_qr_code(data: str) -> BytesIO:
-    qr = qrcode.make(data)
-    buffer = BytesIO()
-    qr.save(buffer, format="PNG")
-    buffer.seek(0)
-    return buffer  # raw bytes
-
-# === Email Sending ===
-def send_ticket_email(to_email: str, subject: str, body_text: str, qr_img_bytes: BytesIO):
-    
-    msg = MIMEMultipart('related')
-    msg['To'] = to_email
-    msg['From'] = "testmail@mandakh.edu.mn"
-    msg['Subject'] = subject
-
-    # Create the HTML content with CID reference
-    bodyHTML = f"""
-    <html>
-        <body>
-            <p>{body_text}</p>
-            <p>Here is your ticket QR code:</p>
-            <img src="cid:ticketqr">
-        </body>
-    </html>
+def sendResponse(request, code, data, action):
     """
-    msg.attach(MIMEText(bodyHTML, 'html'))
-
-    # Attach the image with CID
-    qr_img_bytes.seek(0)
-    image = MIMEImage(qr_img_bytes.read(), name="ticket.png")
-    image.add_header('Content-ID', '<ticketqr>')
-    msg.attach(image)
-
-    # Send using your settings.py sendMail
-    sendMail(to_email, subject, msg.as_string())
-
-
-def dt_create_event(request):
-    jsons =json.loads(request.body)
-    action = jsons["action"]
-    
-    try:
-        ename = jsons['ename'] # event name
-        edesc = jsons['edesc'] # event descripsion
-        edateb = jsons['edateb'] # event start date
-        edatee = jsons['edatee'] # event end date
-        venid = jsons['vid'] # venue id
-
-    except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
-        action = jsons['action']
-        respdata = []
-        resp = sendResponse(request, 3027, respdata, action) # response beldej baina. 6 keytei.
-        return resp
-    
-    try: 
-        myConn = connectDB() # database holbolt uusgej baina
-        cursor = myConn.cursor() # cursor uusgej baina
-        
-        # Hereglegchiin ner, password-r nevtreh erhtei (is_verified=True) hereglegch login hiij baigaag toolj baina.
-        query = F"""INSERT INTO events (name, description, start_time, end_time, venueid, created_at, updated_at)
-                    VALUES (
-                    '{ename}', 
-                    '{edesc}',
-                    '{edateb}',
-                    '{edatee}',
-                    {venid},
-                    NOW(),
-                    NOW()
-                )
-                RETURNING eventid;""" 
-        #print(query)
-        cursor.execute(query) # executing query
-        columns = cursor.description #
-        respRow = [{columns[index][0]:column for index, 
-            column in enumerate(value)} for value in cursor.fetchall()] # respRow is list and elements are dictionary. dictionary structure is columnName : value
-        print(respRow)
-        myConn.commit()
-        resp = sendResponse(request, 200, respRow[0], action)
-        cursor.close() # close the cursor. ALWAYS
-    except:
-        # login service deer aldaa garval ajillana. 
-        action = jsons["action"]
-        respdata = [] # hooson data bustaana.
-        resp = sendResponse(request, 5000, respdata, action) # standartiin daguu 6 key-tei response butsaana
-        
-    finally:
-        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-        return resp # response bustaaj baina
-
-# Events үүсгэх ба суудлын тоо
-
-def dt_seats(request):
-    jsons =json.loads(request.body)
-    action = jsons["action"]
-    try:
-        eid = jsons['eid'] # event id
-        stype = jsons['stype'] # ticket name
-        price = jsons['price'] # ticket price
-        seat = jsons['seat'] # total number of seat
-
-    except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
-        action = jsons['action']
-        respdata = []
-        resp = sendResponse(request, 3006, respdata, action) # response beldej baina. 6 keytei.
-        return resp
-    
-    try: 
-        myConn = connectDB() # database holbolt uusgej baina
-        cursor = myConn.cursor() # cursor uusgej baina
-        query = F"""INSERT INTO tickettypes (eventid, typename, price, quantityavailable, availableseat)
-                    VALUES 
-                    ({eid}, '{stype}', {price}, {seat},{seat})
-                    RETURNING tickettypeid;""" 
-        #print(query)
-        cursor.execute(query) # executing query
-        columns = cursor.description
-        respRow = [{columns[index][0]: column for index, column in enumerate(value)} for value in cursor.fetchall()]
-        myConn.commit()
-        resp = sendResponse(request, 200, respRow, action)
-        cursor.close() # close the cursor. ALWAYS
-    except:
-        action = jsons["action"]
-        respdata = [] # hooson data bustaana.
-        resp = sendResponse(request, 5000, respdata, action) # standartiin daguu 6 key-tei response butsaana
-        
-    finally:
-        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-        return resp # response bustaaj baina
-
-def dt_booking(request):
-    jsons =json.loads(request.body)
-    action = jsons["action"]
-    try:
-        uid = "uid"
-        ttype = "ttype"
-        quantity = "quantity"
-        tprice = "tprice"
-        status = "status"
-    
-    except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
-        action = jsons['action']
-        respdata = []
-        resp = sendResponse(request, 3006, respdata, action) # response beldej baina. 6 keytei.
-        return resp
-    
-    try: 
-        myConn = connectDB() # database holbolt uusgej baina
-        cursor = myConn.cursor() # cursor uusgej baina
-        query = F"""INSERT INTO bookings (userid, tickettypeid, quantity, totalprice, status, bookingdate)
-        VALUES 
-        ({uid}, {ttype}, {quantity}, {tprice},'{status}', NOW())
-        RETURNING tickettypeid;""" 
-        #print(query)
-        cursor.execute(query) # executing query
-        columns = cursor.description
-        respRow = [{columns[index][0]: column for index, column in enumerate(value)} for value in cursor.fetchall()]
-        myConn.commit()
-        resp = sendResponse(request, 200, respRow, action)
-        cursor.close() # close the cursor. ALWAYS
-        
-    except:
-        action = jsons["action"]
-        respdata = [] # hooson data bustaana.
-        resp = sendResponse(request, 5000, respdata, action) # standartiin daguu 6 key-tei response butsaana
-        
-    finally:
-        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-        return resp # response bustaaj baina
-
-def dt_paymethod(request):
-    jsons =json.loads(request.body)
-    action = jsons["action"]
-    try:
-        uid = jsons["uid"]
-        provider = jsons["provider"]
-        token = jsons["token"]
-    
-    except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
-        action = jsons['action']
-        respdata = []
-        resp = sendResponse(request, 3006, respdata, action) # response beldej baina. 6 keytei.
-        return resp
-    
-    try: 
-        myConn = connectDB() # database holbolt uusgej baina
-        cursor = myConn.cursor() # cursor uusgej baina
-        query = F"""INSERT INTO paymentmethods (userid, provider, token, createdate)
-        VALUES 
-        ({uid},
-        {provider},
-        {token},
-        NOW())
-        RETURNING tickettypeid;""" 
-        #print(query)
-        cursor.execute(query) # executing query
-        columns = cursor.description
-        respRow = [{columns[index][0]: column for index, column in enumerate(value)} for value in cursor.fetchall()]
-        myConn.commit()
-        resp = sendResponse(request, 200, respRow, action)
-        cursor.close() # close the cursor. ALWAYS
-    except:
-        action = jsons["action"]
-        respdata = [] # hooson data bustaana.
-        resp = sendResponse(request, 5000, respdata, action) # standartiin daguu 6 key-tei response butsaana
-        
-    finally:
-        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-        return resp # response bustaaj baina
-
-def dt_add(request):
-    jsons =json.loads(request.body)
-    action = jsons["action"]
-    try:
-        tid = jsons["tid"]
-        amount = jsons['seats']
-    
-    except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
-        action = jsons['action']
-        respdata = []
-        resp = sendResponse(request, 3006, respdata, action) # response beldej baina. 6 keytei.
-        return resp
-    
-    try: 
-        myConn = connectDB() # database holbolt uusgej baina
-        cursor = myConn.cursor() # cursor uusgej baina
-        query = F"""
-UPDATE tickettypes 
-SET availableseat = availableseat - {amount} 
-WHERE tickettypeid = {tid} AND availableseat >= {amount};
-""" 
-        #print(query)
-        cursor.execute(query) # executing query
-        myConn.commit()
-        # respdata = []
-        if cursor.rowcount == 0:
-            resp = sendResponse(request, 201, [], action)
-        else:
-            resp = sendResponse(request, 200, [], action)
-        # resp = sendResponse(request, 200, respdata, action)
-        cursor.close() # close the cursor. ALWAYS
-    except:
-        action = jsons["action"]
-        respdata = [] # hooson data bustaana.
-        resp = sendResponse(request, 5000, respdata, action) # standartiin daguu 6 key-tei response butsaana
-        
-    finally:
-        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-        return resp # response bustaaj baina
-
-def dt_avialable_seats(request):
-    jsons =json.loads(request.body)
-    action = jsons["action"]
-    try:
-        tid = jsons["tid"]
-    
-    except: # key ali neg ni baihgui bol aldaanii medeelel butsaana
-        action = jsons['action']
-        respdata = []
-        resp = sendResponse(request, 3006, respdata, action) # response beldej baina. 6 keytei.
-        return resp
-    
-    try: 
-        myConn = connectDB() # database holbolt uusgej baina
-        cursor = myConn.cursor() # cursor uusgej baina
-        query = F"""
-SELECT tickettypeid, availableseat 
-FROM tickettypes
-WHERE tickettypeid = {tid}
-"""
-        #print(query)
-        cursor.execute(query) # executing query
-        myConn.commit()
-        print(cursor.description)
-        columns = cursor.description
-        respRow = [{columns[index][0]: column for index, column in enumerate(value)} for value in cursor.fetchall()]
-        if cursor.rowcount == 0:
-            resp = sendResponse(request, 201, [], action)
-        else:
-            resp = sendResponse(request, 200, respRow, action)
-        # resp = sendResponse(request, 200, respdata, action)
-        cursor.close() # close the cursor. ALWAYS
-    except:
-        action = jsons["action"]
-        respdata = [] # hooson data bustaana.
-        resp = sendResponse(request, 5000, respdata, action) # standartiin daguu 6 key-tei response butsaana
-        
-    finally:
-        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-        return resp # response bustaaj baina
-
-# def dt_create_qr(request):
-#     jsons = json.loads(request.body) # get request body
-#     action = jsons["action"] # get action key from jsons
-#     try :
-#         tid = jsons["tid"] # get gmail key from jsons and lower
-#         username = jsons["username"].capitalize() # get username key from jsons and capitalize
-#         password = jsons["password"] # get password key from jsons
-#     except:
-#         # gmail, password, username key ali neg ni baihgui bol aldaanii medeelel butsaana
-#         action = jsons['action']
-#         respdata = []
-#         resp = sendResponse(request, 3007, respdata, action) # response beldej baina. 6 keytei.
-#         return resp
-    
-#     try:
-#         conn = connectDB() # database holbolt uusgej baina
-#         cursor = conn.cursor() # cursor uusgej baina
-#         # Shineer burtguulj baigaa hereglegch burtguuleh bolomjtoi esehiig shalgaj baina
-#         query = F"SELECT COUNT(*) AS usercount FROM users WHERE gmail = '{gmail}' AND is_verified = True"
-#         # print (query)
-#         cursor.execute(query) # executing query
-#         # print(cursor.description)
-#         columns = cursor.description #
-#         respRow = [{columns[index][0]:column for index, 
-#             column in enumerate(value)} for value in cursor.fetchall()] # respRow is list and elements are dictionary. dictionary structure is columnName : value
-#         print(respRow)
-#         cursor.close() # close the cursor. ALWAYS
-
-#         if respRow[0]["usercount"] == 0: # verified user oldoogui uyd ajillana
-#             cursor1 = conn.cursor() # creating cursor1
-#             # Insert user to users
-#             query = F"""INSERT INTO users(gmail, username, password, is_verified, is_banned, create_date, last_login) 
-#                         VALUES('{gmail}','{username}', '{password}',
-#                         False, False, NOW(), '1970-01-01') 
-#             RETURNING uid"""
-#             print(query)
-            
-#             cursor1.execute(query) # executing cursor1
-#             uid = cursor1.fetchone()[0] # Returning newly inserted (uid)
-#             print(uid, "uid")
-#             conn.commit() # updating database
-            
-#             token = generateStr(20) # generating token 20 urttai
-#             query = F"""INSERT INTO qrz(tid, qrtoken, imagepath, end_date, create_date) 
-#             VALUES({tid}, '{token}', NOW() + interval \'1 day\', NOW() )""" # Inserting t_token
-#             print(query)
-#             cursor1.execute(query) # executing cursor1
-#             conn.commit() # updating database
-#             cursor1.close() # closing cursor1
-            
-#             subject = "User burtgel batalgaajuulah mail"
-#             bodyHTML = F"""<a target='_blank' href='http://localhost:8000/user/?token={token}'>CLICK ME to acivate your account</a>"""
-#             # bodyHTML = F""""""
-#             sendMail(gmail,subject,bodyHTML)
-            
-#             action = jsons['action']
-#             # register service success response with data
-#             respdata = [{"gmail":gmail,"username":username}]
-#             resp = sendResponse(request, 200, respdata, action) # response beldej baina. 6 keytei.
-#         else:
-#             action = jsons['action']
-#             respdata = [{"gmail":gmail, "username":username}]
-#             resp = sendResponse(request, 3008, respdata, action) # response beldej baina. 6 keytei.
-#     except (Exception) as e:
-#         # register service deer aldaa garval ajillana. 
-#         action = jsons["action"]
-#         respdata = [{"aldaa":str(e)}] # hooson data bustaana.
-#         resp = sendResponse(request, 5002, respdata, action) # standartiin daguu 6 key-tei response butsaana
-        
-#     finally:
-#         disconnectDB(conn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-#         return resp # response bustaaj baina
+    Ensure that sendResponse always returns a JsonResponse
+    """
+    response = {
+        "code": code,
+        "data": data,
+        "action": action
+    }
+    return JsonResponse(response)
 
 @csrf_exempt
-def EventService(request):
-    if request.method == "POST": # Method ni POST esehiig shalgaj baina
+def eventapi(request):
+    action = None
+
+    if request.content_type.startswith('application/json'):
         try:
-            # request body-g dictionary bolgon avch baina
-            jsons = json.loads(request.body)
-        except:
-            # request body json bish bol aldaanii medeelel butsaana. 
-            action = "no action"
-            respdata = [] # hooson data bustaana.
-            resp = sendResponse(request, 3003, respdata) # standartiin daguu 6 key-tei response butsaana
-            return JsonResponse(resp) # response bustaaj baina
-            
-        try: 
-            #jsons-s action-g salgaj avch baina
-            action = jsons["action"]
-        except:
-            # request body-d action key baihgui bol aldaanii medeelel butsaana. 
-            action = "no action"
-            respdata = [] # hooson data bustaana.
-            resp = sendResponse(request, 3005, respdata,action) # standartiin daguu 6 key-tei response butsaana
-            return JsonResponse(resp)# response bustaaj baina
-        
-        if action == "addevent":
-            result = dt_create_event(request)
-            return JsonResponse(result)
-        elif action == "seats":
-            result = dt_seats(request)
-            return JsonResponse(result)
-        elif action == "booking":
-            result = dt_booking(request)
-            return JsonResponse(result)
-        elif action == "paymethod":
-            result = dt_paymethod(request)
-            return JsonResponse(result)
-        elif action == "buy":
-            result = dt_add(request)
-            return JsonResponse(result)
-        elif action == 'avseat':
-            result = dt_avialable_seats(request)
-            return JsonResponse(result)
-        else:
-            action = "no action"
-            respdata = []
-            resp = sendResponse(request, 3001, respdata, action)
-            return JsonResponse(resp)
-    # Method ni POST bish bol ajillana
+            data = json.loads(request.body)
+            action = data.get('action')
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    elif request.method == 'POST':
+        action = request.POST.get('action')
+
+    if not action:
+        return JsonResponse({'error': 'Invalid action for form-data'}, status=400)
+
+    print(f"Received action: {action}")
+
+    if action == "create_event":
+        return dt_create_event(data)
+
+    elif action == "list_events":
+        return list_events()
+
+    elif action == "event_detail":
+        return event_detail(data)
+
+    elif action == "available_seats":
+        return available_seats(data)
+
+    elif action == "book_ticket":
+        return book_ticket(data)
+
+    elif action == "get_user_tickets":
+        return get_user_tickets(data)
+
+    elif action == "mock_payment":
+        return mock_payment(data)
+
+    elif action == "get_seats":
+        return get_seats(data)
+
+    elif action == "edit_event":
+        print("Received action:", request.POST.get("action"))
+        return edit_event(request)
+    elif action == "get_seats":
+        return get_seats(request)
+
+
     else:
-        #GET, POST-s busad uyd ajillana
-        action = "no action"
-        respdata = []
-        resp = sendResponse(request, 3002, respdata, action)
-        return JsonResponse(resp)
+        return JsonResponse({"error": "Invalid action"}, status=4001)
+
+def dt_create_event(request):
+    action = request.POST.get("action")
+
+    try:
+        ename = request.POST.get("ename")
+        edesc = request.POST.get("edesc")
+        edateb = request.POST.get("edateb")
+        edatee = request.POST.get("edatee")
+        venid = request.POST.get("vid")
+        images = request.FILES.getlist("images") 
+    except KeyError:
+        return sendResponse(request, 3027, [], action)
+
+    try:
+        myConn = connectDB()
+        cursor = myConn.cursor()
+
+        # Insert event details
+        query = """
+            INSERT INTO event (name, description, start_time, end_time, venue)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING eventid;
+        """
+        cursor.execute(query, [ename, edesc, edateb, edatee, venid])
+        event_id = cursor.fetchone()[0]
+
+        # Save and insert each image
+
+        # Save and insert each image
+        for image in images:
+            filename = f"{int(timezone.now().timestamp())}_{image.name}"
+            image_dir = os.path.join('media', 'events')
+            os.makedirs(image_dir, exist_ok=True)
+            filepath = os.path.join(image_dir, filename)
+
+            with open(filepath, 'wb+') as f:
+                for chunk in image.chunks():
+                    f.write(chunk)
+
+            # Insert image path to event_images table
+                cursor.execute("""
+        INSERT INTO event_images (eventid, image_path)
+        VALUES (%s, %s)
+    """, [event_id, filepath])
+
+# Commit AFTER both inserts
+        myConn.commit()
+
+        cursor.close()
+        resp = sendResponse(request, 200, {'eventid': event_id}, action)
+
+    except Exception as e:
+        print(f"Error creating event: {e}")
+        resp = sendResponse(request, 5000, [], action)
+    finally:
+        disconnectDB(myConn)
+        return resp
+
+def list_events():
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT e.eventid, e.name, e.description, e.start_time, e.end_time, e.venue,
+                ARRAY_AGG(ei.image_path) AS image_paths
+            FROM event e
+            LEFT JOIN event_images ei ON e.eventid = ei.eventid
+            GROUP BY e.eventid
+        """)
+        rows = cursor.fetchall()
+
+    events = [
+        {
+            "eventid": row[0],
+            "name": row[1],
+            "description": row[2],
+            "start_time": row[3],
+            "end_time": row[4],
+            "venue": row[5],
+            "images": [f"/media/{path}" for path in row[6] if path] if row[6] else [],
+        }
+        for row in rows
+    ]
+    return JsonResponse(events, safe=False)
+
+def event_detail(data):
+    eventid = data.get("eventid")
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM event WHERE eventid = %s", [eventid])
+        row = cursor.fetchone()
+        if not row:
+            return JsonResponse({"error": "Event not found"}, status=404)
+
+        # Get all images for the event
+        cursor.execute("SELECT image_path FROM event_images WHERE eventid = %s", [eventid])
+        img_rows = cursor.fetchall()
+        images = [f"/{img[0]}" for img in img_rows if img[0]]
+
+    event = {
+        "eventid": row[0],
+        "name": row[1],
+        "description": row[2],
+        "venue": row[3],
+        "start_time": row[4],
+        "end_time": row[5],
+        "images": images
+    }
+    return JsonResponse(event)
+
+
+def available_seats(data):
+    eventid = data.get("eventid")
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM ticket WHERE eventid = %s AND booked = 0", [eventid])
+        row = cursor.fetchone()
+
+    return JsonResponse({"available_seats": row[0]})
+
+
+def get_seats(data):
+    eventid = data.get("eventid")
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT ticketid, seat, price, booked 
+            FROM ticket WHERE eventid = %s
+        """, [eventid])
+        rows = cursor.fetchall()
+
+    seats = [
+        {
+            "ticketid": row[0],
+            "seat": row[1],
+            "price": float(row[2]),
+            "booked": bool(row[3])
+        } for row in rows
+    ]
+    return JsonResponse(seats, safe=False)
+
+
+def book_ticket(data):
+    userid = data.get("userid")
+    ticketid = data.get("ticketid")
+
+    if not userid or not ticketid:
+        return JsonResponse({"error": "Missing userid or ticketid"}, status=400)
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT booked FROM ticket WHERE ticketid = %s", [ticketid])
+        row = cursor.fetchone()
+
+        if not row:
+            return JsonResponse({"error": "Ticket not found"}, status=404)
+        if row[0]:  # Already booked
+            return JsonResponse({"error": "Ticket already booked"}, status=400)
+
+        # Book the ticket
+        cursor.execute("UPDATE ticket SET booked = 1 WHERE ticketid = %s", [ticketid])
+        cursor.execute("""
+            INSERT INTO booking (userid, ticketid, payment_status, booked_at)
+            VALUES (%s, %s, %s, NOW())
+        """, [userid, ticketid, "pending"])
+
+    return JsonResponse({"success": True, "message": "Ticket booked successfully"})
+
+def mock_payment(data):
+    bookingid = data.get("bookingid")
+
+    with connection.cursor() as cursor:
+        # Just update the status
+        cursor.execute("UPDATE booking SET payment_status = 'paid' WHERE bookingid = %s", [bookingid])
+
+    return JsonResponse({"success": True})
+
+
+def get_user_tickets(data):
+    userid = data.get("userid")
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT b.bookingid, b.payment_status, t.seat, e.name, e.start_time, e.end_time
+            FROM booking b
+            JOIN ticket t ON b.ticketid = t.ticketid
+            JOIN event e ON t.eventid = e.eventid
+            WHERE b.userid = %s
+        """, [userid])
+        rows = cursor.fetchall()
+
+    tickets = [
+        {
+            "bookingid": row[0],
+            "payment_status": row[1],
+            "seat": row[2],
+            "event_name": row[3],
+            "start_time": row[4],
+            "end_time": row[5]
+        } for row in rows
+    ]
+    return JsonResponse(tickets, safe=False)
+
+
+def edit_event(request):
+    action = request.POST.get("action")
+
+    try:
+        eventid = request.POST.get("eventid")
+        ename = request.POST.get("ename")
+        edesc = request.POST.get("edesc")
+        edateb = request.POST.get("edateb")
+        edatee = request.POST.get("edatee")
+        venid = request.POST.get("vid")
+        images = request.FILES.getlist("images")  # This will be empty if no images are uploaded
+    except KeyError:
+        return sendResponse(request, 4001, [], action)
+
+    try:
+        myConn = connectDB()
+        cursor = myConn.cursor()
+
+        # Update event table with the new event details
+        cursor.execute("""
+            UPDATE event 
+            SET name = %s, description = %s, start_time = %s, end_time = %s, venue = %s
+            WHERE eventid = %s
+        """, [ename, edesc, edateb, edatee, venid, eventid])
+
+        # Only update images if new ones were provided
+        if images:
+            # Delete old image records and optionally files (if needed)
+            cursor.execute("SELECT image_path FROM event_images WHERE eventid = %s", [eventid])
+            old_images = cursor.fetchall()
+
+            for img_path_tuple in old_images:
+                img_path = img_path_tuple[0]
+                if os.path.exists(img_path):
+                    os.remove(img_path)  # Delete file from the filesystem
+            cursor.execute("DELETE FROM event_images WHERE eventid = %s", [eventid])
+
+            # Insert new images
+            for image in images:
+                filename = f"{int(timezone.now().timestamp())}_{image.name}"
+                image_dir = os.path.join('media', 'events')
+                os.makedirs(image_dir, exist_ok=True)
+                filepath = os.path.join(image_dir, filename)
+
+                with open(filepath, 'wb+') as f:
+                    for chunk in image.chunks():
+                        f.write(chunk)
+
+                cursor.execute("""
+                    INSERT INTO event_images (eventid, image_path)
+                    VALUES (%s, %s)
+                """, [eventid, filepath])
+
+        # Handle removed images (if any)
+        removed_images = request.FILES.get("removed_images") or request.POST.get("removed_images")
+
+        if removed_images:
+            removed_list = json.loads(removed_images)
+            for img_path in removed_list:
+                full_path = os.path.join(settings.MEDIA_ROOT, img_path.replace("/media/", ""))
+                if os.path.exists(full_path):
+                    os.remove(full_path)
+
+        myConn.commit()
+        cursor.close()
+        resp = sendResponse(request, 200, {"eventid": eventid}, action)
+
+    except Exception as e:
+        print(f"Error editing event: {e}")
+        resp = sendResponse(request, 5001, [], action)
+    finally:
+        disconnectDB(myConn)
+        return resp
+def get_seats(data):
+    eventid = data.get("eventid")
+    if not eventid:
+        return JsonResponse({"error": "Missing eventid"}, status=400)
+
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT ticketid, seat, price, booked FROM ticket WHERE eventid = %s", [eventid])
+        rows = cursor.fetchall()
+
+    seats = [
+        {"ticketid": r[0], "seat": r[1], "price": float(r[2]), "booked": r[3]}
+        for r in rows
+    ]
+    return JsonResponse({"seats": seats})

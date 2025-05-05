@@ -1,5 +1,6 @@
 from datetime import datetime 
 from email.mime.text import MIMEText
+import os
 from pathlib import Path
 import random
 import smtplib
@@ -31,7 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-     "corsheaders",
+    "corsheaders",
     'hed',
     "rest_framework",
 ]
@@ -129,6 +130,7 @@ CORS_ALLOW_CREDENTIALS = True
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://localhost:*"
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -249,3 +251,6 @@ def sendMail(recipient, subj, bodyHtml):
         server.sendmail(sender_email, recipient_email, html_message.as_string())
         server.quit()
 #sendMail
+MEDIA_URL = '/media/'
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = BASE_DIR / 'media'  

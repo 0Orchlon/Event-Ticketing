@@ -7,260 +7,137 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from backend.settings import sendMail, sendResponse ,disconnectDB, connectDB, resultMessages,generateStr
 
-# Odoogiin tsagiig duuddag service
 def dt_gettime(request):
-    jsons = json.loads(request.body) # request body-g dictionary bolgon avch baina
-    action = jsons["action"] #jsons-s action-g salgaj avch baina
-    
-    # url: http://localhost:8000/user/
-    # Method: POST
-    # Body: raw JSON
-    
-    # request body:
-    # {"action":"gettime"}
-    
-    # response:
-    # {
-    #     "resultCode": 200,
-    #     "resultMessage": "Success",
-    #     "data": [
-    #         {
-    #             "time": "2024/11/06, 07:53:58"
-    #         }
-    #     ],
-    #     "size": 1,
-    #     "action": "gettime",
-    #     "curdate": "2024/11/06 07:53:58"
-    # }
+    jsons = json.loads(request.body)
+    action = jsons["action"]
     d1 = datetime.now()
-    respdata = [{'time':d1.strftime("%Y/%m/%d, %H:%M:%S")}]  # response-n data-g beldej baina. list turultei baih
+    respdata = [{'time':d1.strftime("%Y/%m/%d, %H:%M:%S")}]  
     resp = sendResponse(request, 200, respdata, action)
-    # response beldej baina. 6 keytei.
     return resp
-# dt_gettime
-
-#login service
 def dt_login(request):
-    jsons = json.loads(request.body) # get request body
-    action = jsons['action'] # get action key from jsons
-    # print(action)
-    
-    # url: http://localhost:8000/user/
-    # Method: POST
-    # Body: raw JSON
-    
-    # request body:
-    # {
-    #     "action": "login",
-    #     "gmail": "ganzoo@mandakh.edu.mn",
-    #     "password":"73y483h4bhu34buhrbq3uhbi3aefgiu"
-    # }
-    
-    # response:
-    # {
-    #     "resultCode": 1002,
-    #     "resultMessage": "Login Successful",
-    #     "data": [
-    #         {
-    #             "gmail": "ganzoo@mandakh.edu.mn",
-    #             "fname": "Ganzo",
-    #             "lname": "U",
-    #             "last_login": "2024-11-06T15:57:52.996+08:00"
-    #         }
-    #     ],
-    #     "size": 1,
-    #     "action": "login",
-    #     "curdate": "2024/11/06 07:58:10"
-    # }
+    jsons = json.loads(request.body)
+    action = jsons['action']
     try:
-        gmail = jsons['gmail'].lower() # get gmail key from jsons
-        password = jsons['password'] # get password key from jsons
-    except: # gmail, password key ali neg ni baihgui bol aldaanii medeelel butsaana
+        gmail = jsons['gmail'].lower()
+        password = jsons['password']
+    except: 
         action = jsons['action']
         respdata = []
-        resp = sendResponse(request, 3006, respdata, action) # response beldej baina. 6 keytei.
+        resp = sendResponse(request, 3006, respdata, action) 
         return resp
-    
     try: 
-        myConn = connectDB() # database holbolt uusgej baina
-        cursor = myConn.cursor() # cursor uusgej baina
-        
-        # Hereglegchiin ner, password-r nevtreh erhtei (is_verified=True) hereglegch login hiij baigaag toolj baina.
+        myConn = connectDB()
+        cursor = myConn.cursor()
         query = F"""SELECT COUNT(*) AS usercount, MIN(username) AS username 
                 FROM users
                 WHERE gmail = '{gmail}' 
                 AND is_verified = True 
                 AND password = '{password}' 
                 AND is_banned = False """ 
-        #print(query)
-        cursor.execute(query) # executing query
-        columns = cursor.description #
+        cursor.execute(query)
+        columns = cursor.description
         respRow = [{columns[index][0]:column for index, 
-            column in enumerate(value)} for value in cursor.fetchall()] # respRow is list and elements are dictionary. dictionary structure is columnName : value
+            column in enumerate(value)} for value in cursor.fetchall()]
         print(respRow)
-        cursor.close() # close the cursor. ALWAYS
-
-        if respRow[0]['usercount'] == 1: # verified user oldson uyd login hiine
-            cursor1 = myConn.cursor() # creating cursor1
-            
-            # get logged user information
+        cursor.close()
+        if respRow[0]['usercount'] == 1:
+            cursor1 = myConn.cursor() 
             query = F"""SELECT uid, gmail, last_login, username
                     FROM users 
                     WHERE gmail = '{gmail}' AND is_verified = True AND password = '{password}'"""
-            
-            cursor1.execute(query) # executing cursor1
-            columns = cursor1.description # 
-            # print(columns, "tuples")
+            cursor1.execute(query)
+            columns = cursor1.description
             respRow = [{columns[index][0]:column for index, 
-                column in enumerate(value)} for value in cursor1.fetchall()] # respRow is list. elements are dictionary. dictionary structure is columnName : value
-            # print(respRow)
-            
-            uid = respRow[0]['uid'] #
-            gmail = respRow[0]['gmail'] # 
-            lname = respRow[0]['username'] #
-            last_login = respRow[0]['last_login'] #
-
-            respdata = [{'uid': uid,'gmail':gmail, 'username':lname, 'last_login':last_login}] # creating response logged user information
-            resp = sendResponse(request, 1002, respdata, action) # response beldej baina. 6 keytei.
-
+                column in enumerate(value)} for value in cursor1.fetchall()]
+            uid = respRow[0]['uid'] 
+            gmail = respRow[0]['gmail'] 
+            lname = respRow[0]['username']
+            last_login = respRow[0]['last_login']
+            respdata = [{'uid': uid,'gmail':gmail, 'username':lname, 'last_login':last_login}] 
+            resp = sendResponse(request, 1002, respdata, action)
             query = F"""UPDATE users 
                     SET last_login = NOW()
                     WHERE gmail = '{gmail}' AND is_verified = True AND password = '{password}'"""
-            
-            cursor1.execute(query) # executing query cursor1
-            myConn.commit() # save update query database
-            cursor1.close() # closing cursor1
-            
-        else: # if user name or password wrong 
-            data = [{'gmail':gmail}] # he/she wrong username, password. just return username
-            resp = sendResponse(request, 1004, data, action) # response beldej baina. 6 keytei.
+            cursor1.execute(query) 
+            myConn.commit()
+            cursor1.close()
+        else: 
+            data = [{'gmail':gmail}] 
+            resp = sendResponse(request, 1004, data, action)
     except:
-        # login service deer aldaa garval ajillana. 
         action = jsons["action"]
-        respdata = [] # hooson data bustaana.
-        resp = sendResponse(request, 5001, respdata, action) # standartiin daguu 6 key-tei response butsaana
-        
+        respdata = []
+        resp = sendResponse(request, 5001, respdata, action) 
     finally:
-        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-        return resp # response bustaaj baina
-#dt_login
-
+        disconnectDB(myConn) 
+        return resp
 def dt_register(request):
-    jsons = json.loads(request.body) # get request body
-    action = jsons["action"] # get action key from jsons
-    # print(action)
-    
-    # url: http://localhost:8000/user/
-    # Method: POST
-    # Body: raw JSON
-    
-    # request body:
-    # {
-    #     "action": "register",
-    #     "gmail": "ganzoo@mandakh.edu.mn",
-    #     "password":"a9b7ba70783b617e9998dc4dd82eb3c5",
-    #     "lname":"Ganzo",
-    #     "fname":"U"
-    # }
-    
-    # response:
-    # {
-    #     "resultCode": 200,
-    #     "resultMessage": "Success",
-    #     "data": [
-    #         {
-    #             "gmail": "ganzoo@mandakh.edu.mn",
-    #             "lname": "U",
-    #             "fname": "Ganzo"
-    #         }
-    #     ],
-    #     "size": 1,
-    #     "action": "register",
-    #     "curdate": "2024/11/06 07:59:23"
-    # }
+    jsons = json.loads(request.body)
+    action = jsons["action"]
     try :
-        gmail = jsons["gmail"].lower() # get gmail key from jsons and lower
-        username = jsons["username"].capitalize() # get username key from jsons and capitalize
-        password = jsons["password"] # get password key from jsons
+        gmail = jsons["gmail"].lower()
+        username = jsons["username"].capitalize()
+        password = jsons["password"]
     except:
-        # gmail, password, username key ali neg ni baihgui bol aldaanii medeelel butsaana
         action = jsons['action']
         respdata = []
-        resp = sendResponse(request, 3007, respdata, action) # response beldej baina. 6 keytei.
+        resp = sendResponse(request, 3007, respdata, action)
         return resp
     
     try:
-        conn = connectDB() # database holbolt uusgej baina
-        cursor = conn.cursor() # cursor uusgej baina
-        # Shineer burtguulj baigaa hereglegch burtguuleh bolomjtoi esehiig shalgaj baina
+        conn = connectDB()
+        cursor = conn.cursor()
         query = F"SELECT COUNT(*) AS usercount FROM users WHERE gmail = '{gmail}' AND is_verified = True"
-        # print (query)
-        cursor.execute(query) # executing query
-        # print(cursor.description)
+        cursor.execute(query) 
         columns = cursor.description #
         respRow = [{columns[index][0]:column for index, 
-            column in enumerate(value)} for value in cursor.fetchall()] # respRow is list and elements are dictionary. dictionary structure is columnName : value
+            column in enumerate(value)} for value in cursor.fetchall()] 
         print(respRow)
-        cursor.close() # close the cursor. ALWAYS
-
-        if respRow[0]["usercount"] == 0: # verified user oldoogui uyd ajillana
-            cursor1 = conn.cursor() # creating cursor1
-            # Insert user to users
+        cursor.close()
+        if respRow[0]["usercount"] == 0:
+            cursor1 = conn.cursor()
             query = F"""INSERT INTO users(gmail, username, password, is_verified, is_banned, create_date, last_login) 
                         VALUES('{gmail}','{username}', '{password}',
                         False, False, NOW(), '1970-01-01') 
             RETURNING uid"""
             print(query)
-            
-            cursor1.execute(query) # executing cursor1
-            uid = cursor1.fetchone()[0] # Returning newly inserted (uid)
+            cursor1.execute(query)
+            uid = cursor1.fetchone()[0]
             print(uid, "uid")
-            conn.commit() # updating database
-            
-            token = generateStr(20) # generating token 20 urttai
+            conn.commit() 
+            token = generateStr(20) 
             query = F"""INSERT INTO t_token(uid, token, token_type, end_date, create_date) VALUES({uid}, '{token}', 'register', NOW() + interval \'1 day\', NOW() )""" # Inserting t_token
             print(query)
-            cursor1.execute(query) # executing cursor1
-            conn.commit() # updating database
-            cursor1.close() # closing cursor1
+            cursor1.execute(query)
+            conn.commit()
+            cursor1.close()
             
             subject = "User burtgel batalgaajuulah mail"
             bodyHTML = F"""<a target='_blank' href='http://localhost:8000/user/?token={token}'>CLICK ME to acivate your account</a>"""
-            # bodyHTML = F""""""
             sendMail(gmail,subject,bodyHTML)
-            
             action = jsons['action']
-            # register service success response with data
             respdata = [{"gmail":gmail,"username":username}]
-            resp = sendResponse(request, 200, respdata, action) # response beldej baina. 6 keytei.
+            resp = sendResponse(request, 200, respdata, action)
         else:
             action = jsons['action']
             respdata = [{"gmail":gmail, "username":username}]
-            resp = sendResponse(request, 3008, respdata, action) # response beldej baina. 6 keytei.
+            resp = sendResponse(request, 3008, respdata, action)
     except (Exception) as e:
-        # register service deer aldaa garval ajillana. 
         action = jsons["action"]
-        respdata = [{"aldaa":str(e)}] # hooson data bustaana.
-        resp = sendResponse(request, 5002, respdata, action) # standartiin daguu 6 key-tei response butsaana
-        
+        respdata = [{"aldaa":str(e)}] 
+        resp = sendResponse(request, 5002, respdata, action)
     finally:
-        disconnectDB(conn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-        return resp # response bustaaj baina
-# dt_register
-
+        disconnectDB(conn)
+        return resp
 def dt_activate(request):
     try:
         jsons = json.loads(request.body)
         uid = jsons.get("uid")
         token = jsons.get("token")
-
         if not all([uid, token]):
             return sendResponse(request, 4000, [], "activate")
-
         conn = connectDB()
         cursor = conn.cursor()
-
-        # Verify token
         query = f"""
         SELECT token, end_date FROM t_token 
         WHERE uid = {uid} AND token = '{token}' AND token_type = 'register'
@@ -268,21 +145,16 @@ def dt_activate(request):
         cursor.execute(query)
         token_data = cursor.fetchone()
         cursor.close()
-
         if not token_data or token_data[1] < datetime.now().date():
             return sendResponse(request, 4001, [], "activate")
-        # Activate user
         cursor1 = conn.cursor()
         query = f"UPDATE users SET is_verified = True WHERE uid = {uid}"
         cursor1.execute(query)
         conn.commit()
-
-        # Invalidate token
         query = f"DELETE FROM t_token WHERE uid = {uid} AND token = '{token}'"
         cursor1.execute(query)
         conn.commit()
         cursor1.close()
-
         return sendResponse(request, 200, [], "activate")
     except Exception as e:
         return sendResponse(request, 5002, [{"error": str(e)}], "activate")
@@ -290,139 +162,71 @@ def dt_activate(request):
         disconnectDB(conn)
 
 
-# Nuuts ugee martsan bol duudah service
 def dt_forgot(request):
-    jsons = json.loads(request.body) # get request body
-    action = jsons['action'] # get action key from jsons
-    # print(action)
+    jsons = json.loads(request.body)
+    action = jsons['action']
     resp = {}
-    
-    # url: http://localhost:8000/user/
-    # Method: POST
-    # Body: raw JSON
-    
-    # request body:
-    # {
-    #     "action": "forgot",
-    #     "gmail": "ganzoo@mandakh.edu.mn"
-    # }
-    
-    # response: 
-    # {
-    #     "resultCode": 3012,
-    #     "resultMessage": "Forgot password huselt ilgeelee",
-    #     "data": [
-    #         {
-    #             "gmail": "ganzoo@mandakh.edu.mn"
-    #         }
-    #     ],
-    #     "size": 1,
-    #     "action": "forgot",
-    #     "curdate": "2024/11/06 08:00:32"
-    # }
     try:
-        gmail = jsons['gmail'].lower() # get gmail key from jsons
-    except: # gmail key ali neg ni baihgui bol aldaanii medeelel butsaana
+        gmail = jsons['gmail'].lower() 
+    except: 
         action = jsons['action']
         respdata = []
-        resp = sendResponse(request, 3016, respdata, action) # response beldej baina. 6 keytei.
+        resp = sendResponse(request, 3016, respdata, action)
         return resp
     
     try: 
-        myConn = connectDB() # database holbolt uusgej baina
-        cursor = myConn.cursor() # cursor uusgej baina
-        # hereglegch burtgeltei esehiig shalgaj baina. Burtgelgui, verified hiigeegui hereglegch bol forgot password ajillahgui.
+        myConn = connectDB()
+        cursor = myConn.cursor()
         query = f"""SELECT COUNT(*) AS usercount, MIN(gmail) AS gmail , MIN(uid) AS uid
                     FROM users
                     WHERE gmail = '{gmail}' AND is_verified = True"""
-        cursor.execute(query) # executing query
+        cursor.execute(query)
         cursor.description
-        columns = cursor.description #
+        columns = cursor.description 
         respRow = [{columns[index][0]:column for index, 
-            column in enumerate(value)} for value in cursor.fetchall()] # respRow is list and elements are dictionary. dictionary structure is columnName : value
-        # print(respRow)
-        
-        
-        if respRow[0]['usercount'] == 1: # verified hereglegch oldson bol nuuts ugiig sergeehiig zuvshuurnu. 
+            column in enumerate(value)} for value in cursor.fetchall()] 
+        if respRow[0]['usercount'] == 1:
             uid = respRow[0]['uid']
             gmail = respRow[0]['gmail']
-            token = generateStr(25) # forgot password-iin token uusgej baina. 25 urttai
+            token = generateStr(25) 
             query = F"""INSERT INTO t_token(uid, token, token_type, end_date, create_date) 
-            VALUES({uid}, '{token}', 'forgot', NOW() + interval \'1 day\', NOW() )""" # Inserting forgot token in t_token
-            cursor.execute(query) # executing query
-            myConn.commit() # saving DB
-            
-            # forgot password verify hiih mail
+            VALUES({uid}, '{token}', 'forgot', NOW() + interval \'1 day\', NOW() )"""
+            cursor.execute(query)
+            myConn.commit()
             subject = "Nuuts ug shinechleh"
             body = f"<a href='http://localhost:3000/verified/?token={token}'>Martsan nuuts ugee shinechleh link</a>"
             sendMail(gmail, subject, body)
-            
-            # sending Response
             action = jsons['action']
             respdata = [{"gmail":gmail}]
             resp = sendResponse(request,3012,respdata,action )
-            
-        else: # verified user not found 
+        else:
             action = jsons['action']
             respdata = [{"gmail":gmail}]
             resp = sendResponse(request,3013,respdata,action )
-            
-    except Exception as e: # forgot service deer dotood aldaa garsan bol ajillana.
-        # forgot service deer aldaa garval ajillana. 
+    except Exception as e:
         action = jsons["action"]
-        respdata = [{"error":str(e)}] # hooson data bustaana.
-        resp = sendResponse(request, 5003, respdata, action) # standartiin daguu 6 key-tei response butsaana
+        respdata = [{"error":str(e)}]
+        resp = sendResponse(request, 5003, respdata, action) 
     finally:
-        cursor.close() # close the cursor. ALWAYS
-        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-        return resp # response bustaaj baina
-# dt_forgot
-
-# Nuuts ugee martsan uyd resetpassword service-r nuuts ugee shinechilne
+        cursor.close()
+        disconnectDB(myConn)
+        return resp
 def dt_resetpassword(request):
-    jsons = json.loads(request.body) # get request body
-    action = jsons['action'] # get action key from jsons
-    # print(action)
+    jsons = json.loads(request.body) 
+    action = jsons['action'] 
     resp = {}
-    
-    # url: http://localhost:8000/user/
-    # Method: POST
-    # Body: raw JSON
-    
-    # request body:
-    #  {
-    #     "action": "resetpassword",
-    #     "token":"145v2n080t0lqh3i1dvpt3tgkrmn3kygqf5sqwnw",
-    #     "newpass":"MandakhSchool"
-    # }
-    
-    # response:
-    # {
-    #     "resultCode": 3019,
-    #     "resultMessage": "martsan nuuts ugiig shinchille",
-    #     "data": [
-    #         {
-    #             "gmail": "ganzoo@mandakh.edu.mn"
-    #         }
-    #     ],
-    #     "size": 1,
-    #     "action": "resetpassword",
-    #     "curdate": "2024/11/06 08:03:25"
-    # }
     try:
-        newpass = jsons['newpass'] # get newpass key from jsons
-        token = jsons['token'] # get token key from jsons
-    except: # newpass, token key ali neg ni baihgui bol aldaanii medeelel butsaana
+        newpass = jsons['newpass'] 
+        token = jsons['token'] 
+    except: 
         action = jsons['action']
         respdata = []
-        resp = sendResponse(request, 3018, respdata, action) # response beldej baina. 6 keytei.
+        resp = sendResponse(request, 3018, respdata, action)
         return resp
     
     try: 
-        myConn = connectDB() # database holbolt uusgej baina
-        cursor = myConn.cursor() # cursor uusgej baina
-        
-        # Tuhain token deer burtgeltei batalgaajsan hereglegch baigaa esehiig shalgana. Neg l hereglegch songogdono esvel songogdohgui. Token buruu, hugatsaa duussan bol resetpassword service ajillahgui.
+        myConn = connectDB() 
+        cursor = myConn.cursor() 
         query = f"""SELECT COUNT (users.uid) AS usercount
                 , MIN(gmail) AS gmail
                 , MAX(users.uid) AS uid
@@ -432,83 +236,46 @@ def dt_resetpassword(request):
                 WHERE t_token.token = '{token}'
                 AND users.is_verified = True
                 AND t_token.end_date > NOW()"""
-        cursor.execute(query) # executing query
-        columns = cursor.description #
+        cursor.execute(query)
+        columns = cursor.description 
         respRow = [{columns[index][0]:column for index, 
-            column in enumerate(value)} for value in cursor.fetchall()] # respRow is list and elements are dictionary. dictionary structure is columnName : value
-        # print(respRow)
-        if respRow[0]['usercount'] == 1: # token idevhtei, verified hereglegch oldson bol nuuts ugiig shinechlehiig zuvshuurnu.
+            column in enumerate(value)} for value in cursor.fetchall()] 
+        if respRow[0]['usercount'] == 1:
             uid = respRow[0]['uid']
             gmail = respRow[0]['gmail']
             tid = respRow[0] ['tid'] 
-            token = generateStr(40) # shine ajilladaggui token uusgej baina. 40 urttai. 
+            token = generateStr(40)
             query = F"""UPDATE users SET password = '{newpass}'
-                        WHERE users.uid = {uid}""" # Updating user's new password in users
-            cursor.execute(query) # executing query
-            myConn.commit() # saving DB
+                        WHERE users.uid = {uid}"""
+            cursor.execute(query)
+            myConn.commit()
             
             query = F"""UPDATE t_token 
                 SET token = '{token}'
                 , end_date = '1970-01-01' 
-                WHERE tid = {tid}""" # Updating token and end_date in t_token. Token-iig idevhgui bolgoj baina
-            cursor.execute(query) # executing query
-            myConn.commit() # saving DB             
-            
-            # sending Response
+                WHERE tid = {tid}""" 
+            cursor.execute(query)
+            myConn.commit()             
             action = jsons['action']
             respdata = [{"gmail":gmail}]
             resp = sendResponse(request,3019,respdata,action )
-            
-        else: # token not found 
+        else:
             action = jsons['action']
             respdata = []
             resp = sendResponse(request,3020,respdata,action )
-            
-    except Exception as e: # reset password service deer dotood aldaa garsan bol ajillana.
-        # reset service deer aldaa garval ajillana. 
+    except Exception as e:
         action = jsons["action"]
-        respdata = [{"error":str(e)}] # aldaanii medeelel bustaana.
-        resp = sendResponse(request, 5005, respdata, action) # standartiin daguu 6 key-tei response butsaana
+        respdata = [{"error":str(e)}] 
+        resp = sendResponse(request, 5005, respdata, action) 
     finally:
-        cursor.close() # close the cursor. ALWAYS
-        disconnectDB(myConn) # yamarch uyd database holbolt uussen bol holboltiig salgana. Uchir ni finally dotor baigaa
-        return resp # response bustaaj baina
-#dt_resetpassword
-
-# Huuchin nuuts ugee ashiglan Shine nuuts ugeer shinechleh service
+        cursor.close()
+        disconnectDB(myConn)
+        return resp
 def dt_changepassword(request):
-    jsons = json.loads(request.body) # get request body
-    action = jsons['action'] # get action key from jsons
-    # print(action)
+    jsons = json.loads(request.body) 
+    action = jsons['action'] 
     resp = {}
     
-    # url: http://localhost:8000/user/
-    # Method: POST
-    # Body: raw JSON
-    
-    # request body:
-    # {
-    #     "action": "changepassword",
-    #     "gmail": "ganzoo@mandakh.edu.mn",
-    #     "oldpass":"a1b2c3d4",
-    #     "newpass":"a1b2"
-    # }
-    
-    # response: 
-    # {
-    #     "resultCode": 3022,
-    #     "resultMessage": "nuuts ug amjilttai soligdloo ",
-    #     "data": [
-    #         {
-    #             "gmail": "ganzoo@mandakh.edu.mn",
-    #             "lname": "U",
-    #             "fname": "Ganzo"
-    #         }
-    #     ],
-    #     "size": 1,
-    #     "action": "changepassword",
-    #     "curdate": "2024/11/06 08:04:18"
-    # }
     try:
         gmail = jsons['gmail'].lower() # get gmail key from jsons
         newpass = jsons['newpass'] # get newpass key from jsons
@@ -520,9 +287,8 @@ def dt_changepassword(request):
         return resp
     
     try: 
-        myConn = connectDB() # database holbolt uusgej baina
-        cursor = myConn.cursor() # cursor uusgej baina
-        # burtgeltei batalgaajsan hereglegchiin nuuts ug zuv esehiig shalgaj baina. Burtgelgui, verified hiigeegui, huuchin nuuts ug taarahgui hereglegch bol change password ajillahgui.
+        myConn = connectDB()
+        cursor = myConn.cursor() 
         query = f"""SELECT COUNT(uid) AS usercount ,MAX(uid) AS uid
                     ,MIN(gmail) AS gmail
                     ,MAX (username) AS fname
@@ -533,9 +299,8 @@ def dt_changepassword(request):
         cursor.execute(query) # executing query
         columns = cursor.description #
         respRow = [{columns[index][0]:column for index, 
-            column in enumerate(value)} for value in cursor.fetchall()] # respRow is list and elements are dictionary. dictionary structure is columnName : value
-        # print(respRow)
-        if respRow[0]['usercount'] == 1: # Burtgeltei, batalgaajsan, huuchin nuuts ug taarsan hereglegch oldson bol nuuts ugiig shineer solihiig zuvshuurnu.
+            column in enumerate(value)} for value in cursor.fetchall()] 
+        if respRow[0]['usercount'] == 1: 
             uid = respRow[0]['uid']
             gmail = respRow[0]['gmail']
             fname = respRow[0]['fname']
@@ -616,38 +381,12 @@ def checkService(request): # hamgiin ehend duudagdah request shalgah service
         elif action == "verify":
             result = dt_activate(request)
             return JsonResponse(result)
-        
         else:
             action = "no action"
             respdata = []
             resp = sendResponse(request, 3001, respdata, action)
             return JsonResponse(resp)
-    
-    # Method ni GET esehiig shalgaj baina. register service, forgot password service deer mail yavuulna. Ene uyd link deer darahad GET method-r url duudagdana.
     elif request.method == "GET":
-        # url: http://localhost:8000/users?token=erjhfbuegrshjwiefnqier
-        # Method: GET
-        # Body: NONE
-        
-        # request body: NONE
-        
-        # response:
-        # {
-        #     "resultCode": 3011,
-        #     "resultMessage": "Forgot password verified",
-        #     "data": [
-        #         {
-        #             "uid": 33,
-        #             "gmail": "ganzoo@mandakh.edu.mn",
-        #             "token_type": "forgot",
-        #             "create_date": "2024-10-16T11:21:57.455+08:00"
-        #         }
-        #     ],
-        #     "size": 1,
-        #     "action": "forgot user verify",
-        #     "curdate": "2024/11/06 08:06:25"
-        # }
-        
         token = request.GET.get('token') # token parameteriin utgiig avch baina.
         
         if (token is None):
@@ -696,8 +435,7 @@ def checkService(request): # hamgiin ehend duudagdah request shalgah service
                     respRow = [{columns[index][0]:column for index, 
                         column in enumerate(value)} for value in cursor.fetchall()]
                     gmail = respRow[0]['gmail']
-                    lname = respRow[0]['lname']
-                    fname = respRow[0]['fname']
+                    username = respRow[0]['username']
                     create_date = respRow[0]['create_date']
                     
                     # Umnu gmail-r verified bolson hereglegch baival tuhain gmail-r dahin verified bolgoj bolohgui. Iimees umnu verified hereglegch oldoh yosgui. 
@@ -726,8 +464,8 @@ def checkService(request): # hamgiin ehend duudagdah request shalgah service
                         
                         # token verified service-n response
                         action = "userverified"
-                        respdata = [{"uid":uid,"gmail":gmail, "lname":lname,
-                                    "fname":fname,"token_type":token_type
+                        respdata = [{"uid":uid,"gmail":gmail, "username":username,
+                                    "token_type":token_type
                                     , "create_date":create_date}]
                         resp = sendResponse(request, 3010, respdata, action) # response beldej baina. 6 keytei.
                     else: # user verified already. User verify his or her mail verifying again. send Response. No change in Database.
@@ -736,7 +474,7 @@ def checkService(request): # hamgiin ehend duudagdah request shalgah service
                         resp = sendResponse(request, 3014, respdata, action) # response beldej baina. 6 keytei.
                 elif token_type == "forgot": # Hervee token_type ni forgot password bol ajillana.
                     
-                    query = f"""SELECT gmail, lname, fname, create_date FROM users
+                    query = f"""SELECT gmail, username, create_date FROM users
                             WHERE uid = {uid} AND is_verified = True""" # Tuhain neg hunii medeelliig avch baina.
                     cursor.execute(query) # executing query
                     columns = cursor.description #
@@ -744,8 +482,7 @@ def checkService(request): # hamgiin ehend duudagdah request shalgah service
                         column in enumerate(value)} for value in cursor.fetchall()]
                     
                     gmail = respRow[0]['gmail']
-                    lname = respRow[0]['lname']
-                    fname = respRow[0]['fname']
+                    username = respRow[0]['username']
                     create_date = respRow[0]['create_date']
                     
                     # forgot password check token response
