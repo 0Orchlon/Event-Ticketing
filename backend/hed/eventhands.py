@@ -161,6 +161,7 @@ def list_events():
                 ARRAY_AGG(ei.image_path) AS image_paths
             FROM event e
             LEFT JOIN event_images ei ON e.eventid = ei.eventid
+            WHERE e.end_time > NOW()
             GROUP BY e.eventid
             ORDER BY e.start_time ASC
         """)
