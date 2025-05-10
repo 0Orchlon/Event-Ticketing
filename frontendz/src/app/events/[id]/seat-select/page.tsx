@@ -16,6 +16,7 @@ export default function SeatSelectPage() {
   const [selected, setSelected] = useState<number[]>([]);
   const [userid, setUserid] = useState<number | null>(null); // simulate login
   const [email, setEmail] = useState('');
+  // const [price, setPrice] = useState<Price>([]);
 
   useEffect(() => {
     // Simulate checking for login
@@ -79,30 +80,41 @@ export default function SeatSelectPage() {
       alert('Booking failed: ' + result.message);
     }
   };
+  const totalPrice = selected
+  .map(id => seats.find(seat => seat.ticketid === id)?.price || 0)
+  .reduce((acc, price) => acc + price, 0);
+  const seatPrice = seats.find(seat => !seat.booked)?.price ?? '—';
 
   return (
     <div className="p-4">
       <a href={`/events/${id}`}>Back</a>
       <h1 className="text-2xl font-bold mb-4">Select Seats for Event #{id}</h1>
+      <h2 className='text-lg font-medium md-2'>1 Seat price: {seatPrice}</h2>
+      <h2 className="text-lg font-medium mb-2">Selected Seats: {selected.length}</h2>
+      <h2 className="text-lg font-medium mb-4">Total Price: ₮{totalPrice}</h2>
+      <div className="space-y-2 mb-4">
+  {Array.from({ length: Math.ceil(seats.length / 10) }, (_, i) => (
+    <div key={i} className="flex gap-2">
+      {seats.slice(i * 10, i * 10 + 10).map(seat => (
+        <button
+          key={seat.ticketid}
+          disabled={seat.booked}
+          onClick={() => toggleSeat(seat.ticketid)}
+          className={`p-2 rounded border text-white text-sm w-24 text-center ${
+            seat.booked
+              ? 'bg-gray-400 cursor-not-allowed'
+              : selected.includes(seat.ticketid)
+              ? 'bg-blue-600'
+              : 'bg-green-500 hover:bg-green-600'
+          }`}
+        >
+          {seat.seat}<br />₮{seat.price}
+        </button>
+      ))}
+    </div>
+  ))}
+</div>
 
-      <div className="grid grid-cols-10 gap-2 mb-4">
-        {seats.map(seat => (
-          <button
-            key={seat.ticketid}
-            disabled={seat.booked}
-            onClick={() => toggleSeat(seat.ticketid)}
-            className={`p-2 rounded border text-white ${
-              seat.booked
-                ? 'bg-gray-400 cursor-not-allowed'
-                : selected.includes(seat.ticketid)
-                ? 'bg-blue-600'
-                : 'bg-green-500 hover:bg-green-600'
-            }`}
-          >
-            {seat.seat}
-          </button>
-        ))}
-      </div>
 
       {!userid && (
         <input

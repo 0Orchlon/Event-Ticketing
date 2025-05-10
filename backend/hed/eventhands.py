@@ -3,14 +3,25 @@
 import os
 import json
 import base64
+import qrcode
+from io import BytesIO
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.db import connection
 from datetime import datetime
 from django.views.decorators.csrf import csrf_exempt
-from backend.settings import connectDB, disconnectDB
+from backend.settings import connectDB, disconnectDB, sendMail
 from django.utils import timezone
+from django.core.mail import EmailMessage
+
+def generate_qr_base64(ticket_id):
+    qr = qrcode.make(f"{ticket_id}")
+    buffer = BytesIO()
+    qr.save(buffer, format="PNG")
+    buffer.seek(0)
+    img_base64 = base64.b64encode(buffer.read()).decode("utf-8")
+    return img_base64
 
 def sendResponse(request, code, data, action):
     """
@@ -72,6 +83,8 @@ def eventapi(request):
         return get_seats(request)
     elif action == "buy_seats":
         return buy_seats(data)
+    elif action == "all_bookings":
+        return all_bookings()
 
 
     else:
@@ -354,13 +367,14 @@ def edit_event(request):
     finally:
         disconnectDB(myConn)
         return resp
+    
 def get_seats(data):
     eventid = data.get("eventid")
     if not eventid:
         return JsonResponse({"error": "Missing eventid"}, status=400)
 
     with connection.cursor() as cursor:
-        cursor.execute("SELECT ticketid, seat, price, booked FROM ticket WHERE eventid = %s", [eventid])
+        cursor.execute("SELECT ticketid, seat, price, booked FROM ticket WHERE eventid = %s ORDER BY ticketid ASC", [eventid])
         rows = cursor.fetchall()
 
     seats = [
@@ -368,6 +382,41 @@ def get_seats(data):
         for r in rows
     ]
     return JsonResponse({"seats": seats})
+
+# def buy_seats(data):
+#     ticketids = data.get("ticketids", [])
+#     userid = data.get("userid")
+#     email = data.get("email")
+
+#     if not ticketids:
+#         return JsonResponse({"status": 400, "message": "No tickets selected"})
+
+#     if not userid and not email:
+#         return JsonResponse({"status": 400, "message": "User info required"})
+
+#     try:
+#         with connection.cursor() as cursor:
+#             for tid in ticketids:
+#                 if userid:
+#                     cursor.execute(
+#                         """
+#                         UPDATE ticket SET booked = TRUE, userid = %s
+#                         WHERE ticketid = %s AND booked = FALSE
+#                         """,
+#                         [userid, tid],
+#                     )
+#                 elif email:
+#                     cursor.execute(
+#                         """
+#                         UPDATE ticket SET booked = TRUE, email = %s
+#                         WHERE ticketid = %s AND booked = FALSE
+#                         """,
+#                         [email, tid],
+#                     )
+#         return JsonResponse({"status": 200, "message": "Tickets booked"})
+#     except Exception as e:
+#         print("Booking error:", e)
+#         return JsonResponse({"status": 500, "message": "Server error"})
 
 def buy_seats(data):
     ticketids = data.get("ticketids", [])
@@ -383,6 +432,7 @@ def buy_seats(data):
     try:
         with connection.cursor() as cursor:
             for tid in ticketids:
+                updated = False
                 if userid:
                     cursor.execute(
                         """
@@ -391,6 +441,7 @@ def buy_seats(data):
                         """,
                         [userid, tid],
                     )
+                    updated = cursor.rowcount > 0
                 elif email:
                     cursor.execute(
                         """
@@ -399,7 +450,55 @@ def buy_seats(data):
                         """,
                         [email, tid],
                     )
-        return JsonResponse({"status": 200, "message": "Tickets booked"})
+                    updated = cursor.rowcount > 0
+
+                if updated:
+                    # Fetch seat number
+                    cursor.execute(
+                        "SELECT seat FROM ticket WHERE ticketid = %s", [tid]
+                    )
+                    row = cursor.fetchone()
+                    seat = row[0] if row else "Unknown"
+
+                    if email:
+                        # Include seat in QR content
+                        qr_content = f"Ticket ID: {tid}, Seat: {seat}"
+                        qr_img_b64 = generate_qr_base64(qr_content)
+
+                        # Email body with seat number
+                        html_body = f"""
+                            <html>
+                            <body>
+                                <h2>🎟️ Your Ticket</h2>
+                                <p><strong>Ticket ID:</strong> {tid}</p>
+                                <p><strong>Seat Number:</strong> {seat}</p>
+                                <p>Thank you for booking! Please present the QR code below at the venue:</p>
+                                <img src="data:image/png;base64,{qr_img_b64}" alt="QR Code" />
+                            </body>
+                            </html>
+                        """
+
+                        sendMail(email, f"Your Ticket for Seat {seat}", html_body)
+
+        return JsonResponse({"status": 200, "message": "Tickets booked and emails sent"})
     except Exception as e:
         print("Booking error:", e)
+        return JsonResponse({"status": 500, "message": "Server error"})
+    
+def all_bookings():
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT ticketid, userid, email, seat, price
+                FROM ticket
+                WHERE booked = TRUE
+                ORDER BY ticketid DESC
+            """)
+            rows = cursor.fetchall()
+            columns = [col[0] for col in cursor.description]
+            bookings = [dict(zip(columns, row)) for row in rows]
+
+        return JsonResponse({"status": 200, "bookings": bookings})
+    except Exception as e:
+        print("Fetch bookings error:", e)
         return JsonResponse({"status": 500, "message": "Server error"})
