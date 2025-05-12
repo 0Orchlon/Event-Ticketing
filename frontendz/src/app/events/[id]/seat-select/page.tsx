@@ -24,8 +24,13 @@ export default function SeatSelectPage() {
 
     fetch('http://localhost:8000/eventapi/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get_seats', eventid: id }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'get_seats',
+        eventid: id,
+      }),
     })
       .then(res => res.json())
       .then(data => setSeats(data.seats))
@@ -43,7 +48,6 @@ export default function SeatSelectPage() {
   const handlePurchase = async () => {
     if (selected.length === 0) return alert('No seats selected.');
     if (!userid && email.trim() === '') return alert('Please provide your email.');
-
     setLoading(true);
 
     const body: any = {
@@ -87,13 +91,12 @@ export default function SeatSelectPage() {
   const totalPrice = selected
     .map(id => seats.find(seat => seat.ticketid === id)?.price || 0)
     .reduce((acc, price) => acc + price, 0);
-
   const seatPrice = seats.find(seat => !seat.booked)?.price ?? '—';
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-xl font-semibold animate-pulse text-purple-600">
+      <div className="flex items-center justify-center h-screen bg-gray-900 text-white">
+        <div className="text-xl font-semibold animate-pulse text-purple-400">
           Booking your seats...
         </div>
       </div>
@@ -101,61 +104,52 @@ export default function SeatSelectPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <a href={`/events/${id}`} className="text-blue-600 hover:underline">
-          ← Back to event
-        </a>
+    <div className="p-6 max-w-5xl mx-auto bg-gray-900 text-white min-h-screen">
+      <a href={`/events/${id}`} className="text-blue-400 hover:underline mb-4 inline-block">← Back to event</a>
+      <h1 className="text-2xl font-bold mb-2">Select Seats for Event #{id}</h1>
+      <p className="text-md mb-1">1 Seat Price: ₮{seatPrice}</p>
+      <p className="text-md mb-1">Selected Seats: {selected.length}</p>
+      <p className="text-md mb-4 font-semibold">Total Price: ₮{totalPrice}</p>
 
-        <h1 className="text-3xl font-bold">Select Seats for Event #{id}</h1>
-
-        <div className="space-y-1">
-          <p className="text-lg">1 Seat Price: <strong>₮{seatPrice}</strong></p>
-          <p className="text-lg">Selected Seats: <strong>{selected.length}</strong></p>
-          <p className="text-lg">Total Price: <strong>₮{totalPrice}</strong></p>
-        </div>
-
-        <div className="space-y-2">
-          {Array.from({ length: Math.ceil(seats.length / 10) }, (_, i) => (
-            <div key={i} className="flex gap-2 flex-wrap">
-              {seats.slice(i * 10, i * 10 + 10).map(seat => (
-                <button
-                  key={seat.ticketid}
-                  disabled={seat.booked}
-                  onClick={() => toggleSeat(seat.ticketid)}
-                  className={`p-2 rounded border text-white text-sm w-24 text-center transition-all duration-200 ${
-                    seat.booked
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : selected.includes(seat.ticketid)
-                      ? 'bg-blue-600'
-                      : 'bg-green-500 hover:bg-green-600'
-                  }`}
-                >
-                  {seat.seat}
-                  <br />₮{seat.price}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-
-        {!userid && (
-          <input
-            type="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            className="mt-4 p-2 border rounded w-full max-w-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        )}
-
-        <button
-          onClick={handlePurchase}
-          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-        >
-          Confirm Purchase
-        </button>
+      {/* Grid layout for seats */}
+      <div className="grid grid-cols-10 gap-2 mb-6">
+        {seats.map(seat => (
+          <button
+            key={seat.ticketid}
+            disabled={seat.booked}
+            onClick={() => toggleSeat(seat.ticketid)}
+            className={`p-2 rounded border text-white text-xs text-center transition-all duration-200 h-16 ${
+              seat.booked
+                ? 'bg-gray-600 cursor-not-allowed'
+                : selected.includes(seat.ticketid)
+                ? 'bg-blue-600'
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
+          >
+            {seat.seat}
+            <br />₮{seat.price}
+          </button>
+        ))}
       </div>
+
+      {/* Email input for guest user */}
+      {!userid && (
+        <input
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          className="mb-4 p-2 border border-gray-500 rounded w-full max-w-sm bg-gray-800 text-white"
+        />
+      )}
+
+      {/* Confirm button */}
+      <button
+        onClick={handlePurchase}
+        className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+      >
+        Confirm Purchase
+      </button>
     </div>
   );
 }

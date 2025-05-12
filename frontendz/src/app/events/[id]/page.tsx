@@ -1,6 +1,6 @@
-"use client";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+'use client';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function EventDetails() {
   const params = useParams();
@@ -12,31 +12,28 @@ export default function EventDetails() {
   useEffect(() => {
     if (!id) return;
 
-    fetch("http://localhost:8000/eventapi/", {
-      method: "POST",
-      body: JSON.stringify({ action: "event_detail", eventid: id }),
+    fetch('http://localhost:8000/eventapi/', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'event_detail', eventid: id }),
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
     })
       .then((res) => res.json())
       .then((data) => setEvent(data))
       .catch((err) => {
-        setError("Failed to fetch event details.");
-        console.error("Error:", err);
+        setError('Failed to fetch event details.');
+        console.error('Error:', err);
       });
   }, [id]);
 
-  if (error) return <div className="text-red-500">{error}</div>;
-  if (!event) return <div className="text-gray-500">Loading...</div>;
+  if (error) return <div className="text-red-400 bg-gray-900 min-h-screen p-8">{error}</div>;
+  if (!event) return <div className="text-gray-400 bg-gray-900 min-h-screen p-8">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 px-6 py-8">
-      <div className="mb-4 flex justify-between">
-        <a
-          href="/"
-          className="text-blue-600 hover:underline"
-        >
+    <div className="min-h-screen bg-gray-900 text-white px-6 py-8">
+      <div className="mb-4 flex justify-between items-center">
+        <a href="/" className="text-blue-400 hover:underline">
           ← Back
         </a>
         <a
@@ -47,21 +44,21 @@ export default function EventDetails() {
         </a>
       </div>
 
-      <div className="bg-gray-100 p-6 rounded shadow-md max-w-3xl mx-auto space-y-6">
+      <div className="bg-gray-800 p-6 rounded shadow-lg max-w-3xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold">{event.name}</h1>
 
         <div>
           <p className="text-lg font-medium">Description:</p>
-          <p className="text-gray-700">{event.description}</p>
+          <p className="text-gray-300">{event.description}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <p>
-            <strong>Start:</strong>{" "}
+            <strong>Start:</strong>{' '}
             {new Date(event.start_time).toLocaleString()}
           </p>
           <p>
-            <strong>End:</strong>{" "}
+            <strong>End:</strong>{' '}
             {new Date(event.end_time).toLocaleString()}
           </p>
           <p className="md:col-span-2">
@@ -77,7 +74,7 @@ export default function EventDetails() {
                 key={idx}
                 src={`http://localhost:8000${img}`}
                 alt={`Event Image ${idx + 1}`}
-                className="w-32 h-32 object-cover rounded shadow hover:scale-105 hover:shadow-lg transition-transform duration-200"
+                className="w-32 h-32 object-cover rounded shadow hover:scale-105 hover:shadow-xl transition-transform duration-200"
               />
             ))}
           </div>
