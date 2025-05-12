@@ -98,7 +98,6 @@ def dt_create_event(request):
         edesc = request.POST.get("edesc")
         edateb = request.POST.get("edateb")
         edatee = request.POST.get("edatee")
-        venid = request.POST.get("vid")
         images = request.FILES.getlist("images")
         seats_json = request.POST.get("seats")  # JSON list of seats (optional)
         seats = json.loads(seats_json) if seats_json else []
@@ -112,10 +111,10 @@ def dt_create_event(request):
 
         # Insert event
         cursor.execute("""
-            INSERT INTO event (name, description, start_time, end_time, venue)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO event (name, description, start_time, end_time)
+            VALUES (%s, %s, %s, %s)
             RETURNING eventid;
-        """, [ename, edesc, edateb, edatee, venid])
+        """, [ename, edesc, edateb, edatee])
         event_id = cursor.fetchone()[0]
 
         # Save and insert images
@@ -157,7 +156,7 @@ def dt_create_event(request):
 def list_events():
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT e.eventid, e.name, e.description, e.start_time, e.end_time, e.venue,
+            SELECT e.eventid, e.name, e.description, e.start_time, e.end_time,
                 ARRAY_AGG(ei.image_path) AS image_paths
             FROM event e
             LEFT JOIN event_images ei ON e.eventid = ei.eventid
@@ -174,8 +173,7 @@ def list_events():
             "description": row[2],
             "start_time": row[3],
             "end_time": row[4],
-            "venue": row[5],
-            "images": [f"/{path}" for path in row[6] if path] if row[6] else [],
+            "images": [f"/{path}" for path in row[5] if path] if row[5] else [],
         }
         for row in rows
     ]
@@ -198,9 +196,8 @@ def event_detail(data):
         "eventid": row[0],
         "name": row[1],
         "description": row[2],
-        "venue": row[3],
-        "start_time": row[4],
-        "end_time": row[5],
+        "start_time": row[3],
+        "end_time": row[4],
         "images": images
     }
     return JsonResponse(event)
@@ -304,7 +301,6 @@ def edit_event(request):
         edesc = request.POST.get("edesc")
         edateb = request.POST.get("edateb")
         edatee = request.POST.get("edatee")
-        venid = request.POST.get("vid")
         images = request.FILES.getlist("images")  # This will be empty if no images are uploaded
     except KeyError:
         return sendResponse(request, 4001, [], action)
@@ -316,9 +312,9 @@ def edit_event(request):
         # Update event table with the new event details
         cursor.execute("""
             UPDATE event 
-            SET name = %s, description = %s, start_time = %s, end_time = %s, venue = %s
+            SET name = %s, description = %s, start_time = %s, end_time = %s
             WHERE eventid = %s
-        """, [ename, edesc, edateb, edatee, venid, eventid])
+        """, [ename, edesc, edateb, edatee, eventid])
 
         # Only update images if new ones were provided
         if images:

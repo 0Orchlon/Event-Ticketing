@@ -8,7 +8,6 @@ export default function CreateEvent() {
     edesc: "",
     edateb: "",
     edatee: "",
-    vid: "1",
   });
   const [images, setImages] = useState<File[]>([]);
   const [seats, setSeats] = useState<{ seat: string; price: number }[]>([]);
@@ -79,14 +78,6 @@ export default function CreateEvent() {
           className="w-full p-2 border rounded"
           value={form.edatee}
           onChange={(e) => setForm({ ...form, edatee: e.target.value })}
-          required
-        />
-        <input
-          type="text"
-          placeholder="Venue ID"
-          className="w-full p-2 border rounded"
-          value={form.vid}
-          onChange={(e) => setForm({ ...form, vid: e.target.value })}
           required
         />
         <input

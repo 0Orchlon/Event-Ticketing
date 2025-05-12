@@ -19,7 +19,6 @@ export default function EditEvent() {
     edesc: "",
     edateb: "",
     edatee: "",
-    vid: "1",
   });
   const [images, setImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -48,7 +47,6 @@ export default function EditEvent() {
           edesc: data.description,
           edateb: formatDatetimeLocal(data.start_time),
           edatee: formatDatetimeLocal(data.end_time),
-          vid: data.venue.toString(),
         });
 
         if (Array.isArray(data.images)) {
@@ -133,16 +131,6 @@ const handleSubmit = async (e: React.FormEvent) => {
         required
         className="w-full p-2 border rounded"
       />
-
-      <input
-        type="text"
-        value={form.vid}
-        onChange={(e) => setForm({ ...form, vid: e.target.value })}
-        placeholder="Venue ID"
-        required
-        className="w-full p-2 border rounded"
-      />
-
       <input
         type="file"
         accept="image/*"
