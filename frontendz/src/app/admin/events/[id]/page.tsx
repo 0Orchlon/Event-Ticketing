@@ -51,9 +51,6 @@ export default function EventDetails() {
       <p>
         <strong>End:</strong> {new Date(event.end_time).toLocaleString()}
       </p>
-      <p>
-        <strong>Venue:</strong> {event.venue}
-      </p>
       <div>
         <strong>Images:</strong>
         <div className="flex gap-2 mt-2 flex-wrap">

@@ -16,6 +16,8 @@ export default function SeatSelectPage() {
   const [selected, setSelected] = useState<number[]>([]);
   const [userid, setUserid] = useState<number | null>(null); // simulate login
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+
   // const [price, setPrice] = useState<Price>([]);
 
   useEffect(() => {
@@ -47,17 +49,20 @@ export default function SeatSelectPage() {
   };
 
   const handlePurchase = async () => {
-    if (selected.length === 0) return alert('No seats selected.');
-    if (!userid && email.trim() === '') return alert('Please provide your email.');
+  if (selected.length === 0) return alert('No seats selected.');
+  if (!userid && email.trim() === '') return alert('Please provide your email.');
 
-    const body: any = {
-      action: 'buy_seats',
-      eventid: id,
-      ticketids: selected,
-    };
-    if (userid) body.userid = userid;
-    else body.email = email.trim();
+  setLoading(true); // Start loading
 
+  const body: any = {
+    action: 'buy_seats',
+    eventid: id,
+    ticketids: selected,
+  };
+  if (userid) body.userid = userid;
+  else body.email = email.trim();
+
+  try {
     const response = await fetch('http://localhost:8000/eventapi/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -69,21 +74,37 @@ export default function SeatSelectPage() {
     if (result.status === 200) {
       alert('Seats booked successfully!');
       setSelected([]);
-      fetch('http://localhost:8000/eventapi/', {
+      const updated = await fetch('http://localhost:8000/eventapi/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get_seats', eventid: id }),
-      })
-        .then(res => res.json())
-        .then(data => setSeats(data.seats));
+      });
+      const data = await updated.json();
+      setSeats(data.seats);
     } else {
       alert('Booking failed: ' + result.message);
     }
-  };
+  } catch (err) {
+    alert('Booking error');
+    console.error(err);
+  } finally {
+    setLoading(false); // Stop loading
+  }
+};
+
   const totalPrice = selected
   .map(id => seats.find(seat => seat.ticketid === id)?.price || 0)
   .reduce((acc, price) => acc + price, 0);
   const seatPrice = seats.find(seat => !seat.booked)?.price ?? '—';
+if (loading) {
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-xl font-semibold animate-pulse text-purple-600">
+        Booking your seats...
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="p-4">

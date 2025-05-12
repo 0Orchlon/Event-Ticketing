@@ -15,7 +15,10 @@ export default function CreateEvent() {
 
   const handleAddSeat = () => {
     if (newSeat.seat && newSeat.price) {
-      setSeats([...seats, { seat: newSeat.seat, price: parseFloat(newSeat.price) }]);
+      setSeats([
+        ...seats,
+        { seat: newSeat.seat, price: parseFloat(newSeat.price) },
+      ]);
       setNewSeat({ seat: "", price: "" });
     }
   };
@@ -90,45 +93,52 @@ export default function CreateEvent() {
 
         {/* Seat Input */}
         <div className="space-y-2 mt-4">
-  <h2 className="text-lg font-semibold">Auto-generate Seats</h2>
-  <div className="flex gap-2">
-    <input
-      type="number"
-      placeholder="Number of Seats"
-      className="p-2 border rounded w-1/2"
-      value={newSeat.count || ""}
-      onChange={(e) =>
-        setNewSeat({ ...newSeat, count: parseInt(e.target.value) })
-      }
-    />
-    <input
-      type="number"
-      placeholder="Price"
-      className="p-2 border rounded w-1/2"
-      value={newSeat.price}
-      onChange={(e) => setNewSeat({ ...newSeat, price: e.target.value })}
-    />
-    <button
-      type="button"
-      className="bg-purple-600 text-white px-2 rounded"
-      onClick={() => {
-        const num = parseInt(newSeat.count);
-        const price = parseFloat(newSeat.price);
-        const autoSeats: { seat: string; price: number }[] = [];
+          <h2 className="text-lg font-semibold">Auto-generate Seats</h2>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              placeholder="Number of Seats"
+              className="p-2 border rounded w-1/2"
+              value={newSeat.count || ""}
+              onChange={(e) =>
+                setNewSeat({ ...newSeat, count: parseInt(e.target.value) })
+              }
+            />
+            <input
+              type="number"
+              placeholder="Price"
+              className="p-2 border rounded w-1/2"
+              value={newSeat.price}
+              onChange={(e) =>
+                setNewSeat({ ...newSeat, price: e.target.value })
+              }
+            />
+            <button
+              type="button"
+              className="bg-purple-600 text-white px-2 rounded"
+              onClick={() => {
+                const num = parseInt(newSeat.count); // total number of seats to generate
+                const price = parseFloat(newSeat.price);
+                const autoSeats: { seat: string; price: number }[] = [];
 
-        for (let i = 0; i < num && i < 26; i++) {
-          const seatName = String.fromCharCode(65 + i) + "1"; // A1, B1, ...
-          autoSeats.push({ seat: seatName, price });
-        }
+                const seatsPerRow = 10;
 
-        setSeats([...seats, ...autoSeats]);
-      }}
-    >
-      Generate
-    </button>
-  </div>
-</div>
-<button
+                for (let i = 0; i < num; i++) {
+                  const row = Math.floor(i / seatsPerRow);
+                  const col = (i % seatsPerRow) + 1;
+                  const rowLetter = String.fromCharCode(65 + row); // A, B, C, ...
+                  const seatName = `${rowLetter}${col}`;
+                  autoSeats.push({ seat: seatName, price });
+                }
+
+                setSeats([...seats, ...autoSeats]);
+              }}
+            >
+              Generate
+            </button>
+          </div>
+        </div>
+        <button
           type="submit"
           className="bg-blue-600 text-white px-4 py-2 rounded"
         >
