@@ -1,4 +1,3 @@
-// src/app/admin/events/[id]/page.tsx
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -12,7 +11,7 @@ export default function EventDetails() {
 
   useEffect(() => {
     if (!id) return;
-    
+
     fetch("http://localhost:8000/eventapi/", {
       method: "POST",
       body: JSON.stringify({ action: "event_detail", eventid: id }),
@@ -21,57 +20,69 @@ export default function EventDetails() {
       },
     })
       .then((res) => res.json())
-      .then((data) => {
-        setEvent(data);
-      })
+      .then((data) => setEvent(data))
       .catch((err) => {
         setError("Failed to fetch event details.");
         console.error("Error:", err);
       });
   }, [id]);
 
-  if (error) return <div>{error}</div>;
-  if (!event) return <div>Loading...</div>;
+  if (error) return <div className="text-red-500">{error}</div>;
+  if (!event) return <div className="text-gray-500">Loading...</div>;
 
   return (
-    <>
-    <div>
-        <a href="/">back</a>
-    </div>
-    <div>
-      <a href={`${id}/seat-select`}>Pay tickets</a>
-    </div>
-    <div className="p-6 max-w-2xl space-y-4">
-      <h1 className="text-2xl font-bold">{event.name}</h1>
-      <div>
-
-      <p>Description:</p>
-      <p>{event.description}</p>
+    <div className="min-h-screen bg-white text-gray-800 px-6 py-8">
+      <div className="mb-4 flex justify-between">
+        <a
+          href="/"
+          className="text-blue-600 hover:underline"
+        >
+          ← Back
+        </a>
+        <a
+          href={`${id}/seat-select`}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+        >
+          Pay Tickets
+        </a>
       </div>
-      <p>
-        <strong>Start:</strong> {new Date(event.start_time).toLocaleString()}
-      </p>
-      <p>
-        <strong>End:</strong> {new Date(event.end_time).toLocaleString()}
-      </p>
-      <p>
-        <strong>Venue:</strong> {event.venue}
-      </p>
-      <div>
-        <strong>Images:</strong>
-        <div className="flex gap-2 mt-2 flex-wrap">
-        {event.images?.map((img: string, idx: number) => (
-      <img
-        key={idx}
-        src={`http://localhost:8000${img}`}
-        alt={`Event Image ${idx + 1}`}
-        className="w-32 h-32 object-cover rounded"
-            />
-          ))}
+
+      <div className="bg-gray-100 p-6 rounded shadow-md max-w-3xl mx-auto space-y-6">
+        <h1 className="text-3xl font-bold">{event.name}</h1>
+
+        <div>
+          <p className="text-lg font-medium">Description:</p>
+          <p className="text-gray-700">{event.description}</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <p>
+            <strong>Start:</strong>{" "}
+            {new Date(event.start_time).toLocaleString()}
+          </p>
+          <p>
+            <strong>End:</strong>{" "}
+            {new Date(event.end_time).toLocaleString()}
+          </p>
+          <p className="md:col-span-2">
+            <strong>Venue:</strong> {event.venue}
+          </p>
+        </div>
+
+        <div>
+          <strong>Images:</strong>
+          <div className="flex gap-3 mt-3 flex-wrap">
+            {event.images?.map((img: string, idx: number) => (
+              <img
+                key={idx}
+                src={`http://localhost:8000${img}`}
+                alt={`Event Image ${idx + 1}`}
+                className="w-32 h-32 object-cover rounded shadow hover:scale-105 hover:shadow-lg transition-transform duration-200"
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
-    </>
-
   );
 }
